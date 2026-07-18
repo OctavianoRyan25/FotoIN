@@ -1,0 +1,146 @@
+/* ─── FotoIN Dashboard — Design System ──────────────────────────────────────
+   Palette mirrors the client app:
+   Paper  #F6F3EC · Paper-2 #EFE9DA · Ink  #1F1B16 · Gold  #B8863C
+   Gold-L #D8AE6E · Teal   #23474A  · Rose #A8433F · Muted #4A443C
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+/* ── Light mode (default) ── */
+@theme {
+  /* Neutral surfaces */
+  --color-background:           hsl(40 28% 96%);    /* #F6F3EC paper */
+  --color-foreground:           hsl(30 10% 11%);    /* #1F1B16 ink */
+  --color-card:                 hsl(0 0% 100%);
+  --color-card-foreground:      hsl(30 10% 11%);
+  --color-popover:              hsl(0 0% 100%);
+  --color-popover-foreground:   hsl(30 10% 11%);
+
+  /* Primary = Ink */
+  --color-primary:              hsl(30 10% 11%);    /* #1F1B16 */
+  --color-primary-foreground:   hsl(40 28% 96%);    /* #F6F3EC */
+
+  /* Secondary = Paper-2 */
+  --color-secondary:            hsl(40 27% 90%);    /* #EFE9DA */
+  --color-secondary-foreground: hsl(30 10% 11%);
+
+  /* Muted */
+  --color-muted:                hsl(40 27% 90%);
+  --color-muted-foreground:     hsl(32 8% 28%);     /* #4A443C */
+
+  /* Accent = Gold-tinted paper */
+  --color-accent:               hsl(40 40% 92%);
+  --color-accent-foreground:    hsl(30 10% 11%);
+
+  /* Destructive */
+  --color-destructive:          hsl(4 42% 44%);     /* #A8433F rose */
+  --color-destructive-foreground: hsl(0 0% 98%);
+
+  /* Border / input */
+  --color-border:               hsl(30 10% 86%);
+  --color-input:                hsl(30 10% 86%);
+  --color-ring:                 hsl(36 52% 47%);    /* #B8863C gold */
+  --radius:                     0.625rem;            /* 10px */
+
+  /* ── Brand tokens ── */
+  --color-brand:                hsl(36 52% 47%);    /* #B8863C gold */
+  --color-brand-foreground:     hsl(0 0% 100%);
+  --color-brand-light:          hsl(36 52% 62%);    /* #D8AE6E gold-light */
+  --color-teal:                 hsl(185 36% 21%);   /* #23474A */
+  --color-teal-foreground:      hsl(0 0% 100%);
+
+  /* ── Typography ── */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'IBM Plex Mono', 'Courier New', monospace;
+}
+
+/* ── Dark mode ── */
+.dark {
+  --color-background:           hsl(30 10% 8%);     /* Very dark ink */
+  --color-foreground:           hsl(40 28% 93%);
+  --color-card:                 hsl(30 10% 11%);    /* #1F1B16 */
+  --color-card-foreground:      hsl(40 28% 93%);
+  --color-popover:              hsl(30 10% 11%);
+  --color-popover-foreground:   hsl(40 28% 93%);
+
+  --color-primary:              hsl(40 28% 93%);
+  --color-primary-foreground:   hsl(30 10% 11%);
+
+  --color-secondary:            hsl(30 10% 16%);
+  --color-secondary-foreground: hsl(40 28% 93%);
+
+  --color-muted:                hsl(30 10% 16%);
+  --color-muted-foreground:     hsl(36 10% 58%);
+
+  --color-accent:               hsl(30 10% 18%);
+  --color-accent-foreground:    hsl(40 28% 93%);
+
+  --color-destructive:          hsl(4 60% 50%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+
+  --color-border:               hsl(30 10% 20%);
+  --color-input:                hsl(30 10% 20%);
+  --color-ring:                 hsl(36 52% 47%);
+
+  --color-brand:                hsl(36 52% 47%);
+  --color-brand-foreground:     hsl(0 0% 100%);
+  --color-teal:                 hsl(185 36% 21%);
+  --color-teal-foreground:      hsl(0 0% 100%);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Film-strip divider (reused from client) ── */
+.film-strip {
+  height: 3px;
+  background-image: radial-gradient(circle, var(--color-foreground) 1.2px, transparent 1.2px);
+  background-size: 12px 100%;
+  background-position: center;
+  opacity: 0.12;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(30 10% 75%);
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb { background: hsl(30 10% 28%); }
+
+/* ── Sidebar active link glow ── */
+.nav-active {
+  background: hsl(36 52% 47% / 0.12);
+  color: hsl(36 52% 38%);
+}
+.dark .nav-active {
+  background: hsl(36 52% 47% / 0.18);
+  color: hsl(36 52% 62%);
+}
+
+/* ── Focus ring — gold instead of generic ── */
+*:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* ── Card hover lift ── */
+.card-hover {
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card-hover:hover {
+  box-shadow: 0 8px 32px hsl(36 52% 47% / 0.10);
+  transform: translateY(-1px);
+}

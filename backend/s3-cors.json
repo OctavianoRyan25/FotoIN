@@ -1,0 +1,15 @@
+{
+  "CORSRules": [
+    {
+      "ID": "fotoin-dashboard-upload",
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "http://localhost:5173"
+      ],
+      "AllowedMethods": ["GET", "PUT", "HEAD"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag", "Content-Length"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}
