@@ -10,15 +10,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type galleryRepo struct {
+type GalleryRepo struct {
 	db *gorm.DB
 }
 
-func NewGalleryRepository(db *gorm.DB) domain.GalleryRepository {
-	return &galleryRepo{db: db}
+func NewGalleryRepository(db *gorm.DB) *GalleryRepo {
+	return &GalleryRepo{db: db}
 }
 
-func (r *galleryRepo) Create(ctx context.Context, gallery *domain.Gallery) error {
+func (r *GalleryRepo) Create(ctx context.Context, gallery *domain.Gallery) error {
 	m := model.FromDomainGallery(gallery)
 	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
 		return err
@@ -27,7 +27,7 @@ func (r *galleryRepo) Create(ctx context.Context, gallery *domain.Gallery) error
 	return nil
 }
 
-func (r *galleryRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Gallery, error) {
+func (r *GalleryRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Gallery, error) {
 	var m model.GalleryModel
 	executor := infra.GetExecutor(ctx, r.db)
 	if err := executor.Preload("Photographer").First(&m, "id = ?", id).Error; err != nil {
@@ -42,7 +42,7 @@ func (r *galleryRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Galle
 	return gallery, nil
 }
 
-func (r *galleryRepo) FindBySlug(ctx context.Context, slug string) (*domain.Gallery, error) {
+func (r *GalleryRepo) FindBySlug(ctx context.Context, slug string) (*domain.Gallery, error) {
 	var m model.GalleryModel
 	executor := infra.GetExecutor(ctx, r.db)
 	if err := executor.Preload("Photographer").First(&m, "slug = ? AND is_active = true AND (expires_at IS NULL OR expires_at > NOW())", slug).Error; err != nil {
@@ -57,7 +57,7 @@ func (r *galleryRepo) FindBySlug(ctx context.Context, slug string) (*domain.Gall
 	return gallery, nil
 }
 
-func (r *galleryRepo) FindByPhotographerID(ctx context.Context, photographerID uuid.UUID, page, limit int) ([]domain.Gallery, int64, error) {
+func (r *GalleryRepo) FindByPhotographerID(ctx context.Context, photographerID uuid.UUID, page, limit int) ([]domain.Gallery, int64, error) {
 	var models []model.GalleryModel
 	var total int64
 
@@ -82,7 +82,7 @@ func (r *galleryRepo) FindByPhotographerID(ctx context.Context, photographerID u
 	return galleries, total, nil
 }
 
-func (r *galleryRepo) Update(ctx context.Context, gallery *domain.Gallery) error {
+func (r *GalleryRepo) Update(ctx context.Context, gallery *domain.Gallery) error {
 	m := model.FromDomainGallery(gallery)
 	if err := infra.GetExecutor(ctx, r.db).Save(m).Error; err != nil {
 		return err
@@ -91,11 +91,11 @@ func (r *galleryRepo) Update(ctx context.Context, gallery *domain.Gallery) error
 	return nil
 }
 
-func (r *galleryRepo) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *GalleryRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return infra.GetExecutor(ctx, r.db).Delete(&model.GalleryModel{}, "id = ?", id).Error
 }
 
-func (r *galleryRepo) ListPublic(ctx context.Context, page, limit int) ([]domain.Gallery, int64, error) {
+func (r *GalleryRepo) ListPublic(ctx context.Context, page, limit int) ([]domain.Gallery, int64, error) {
 	var models []model.GalleryModel
 	var total int64
 
@@ -113,7 +113,7 @@ func (r *galleryRepo) ListPublic(ctx context.Context, page, limit int) ([]domain
 	return model.ToDomainGalleryList(models), total, nil
 }
 
-func (r *galleryRepo) CountPhotos(ctx context.Context, galleryID uuid.UUID) (int, error) {
+func (r *GalleryRepo) CountPhotos(ctx context.Context, galleryID uuid.UUID) (int, error) {
 	var count int64
 	err := infra.GetExecutor(ctx, r.db).Model(&model.PhotoModel{}).Where("gallery_id = ?", galleryID).Count(&count).Error
 	return int(count), err

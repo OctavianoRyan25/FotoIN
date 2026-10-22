@@ -12,15 +12,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type subscriptionRepo struct {
+type SubscriptionRepo struct {
 	db *gorm.DB
 }
 
-func NewSubscriptionRepository(db *gorm.DB) domain.SubscriptionRepository {
-	return &subscriptionRepo{db: db}
+func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepo {
+	return &SubscriptionRepo{db: db}
 }
 
-func (r *subscriptionRepo) Create(ctx context.Context, sub *domain.Subscription) error {
+func (r *SubscriptionRepo) Create(ctx context.Context, sub *domain.Subscription) error {
 	m := model.FromDomainSubscription(sub)
 	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
 		return err
@@ -29,7 +29,7 @@ func (r *subscriptionRepo) Create(ctx context.Context, sub *domain.Subscription)
 	return nil
 }
 
-func (r *subscriptionRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Subscription, error) {
+func (r *SubscriptionRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Subscription, error) {
 	var m model.SubscriptionModel
 	if err := infra.GetExecutor(ctx, r.db).Preload("User").First(&m, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (r *subscriptionRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 	return m.ToDomain(), nil
 }
 
-func (r *subscriptionRepo) FindLatestByUserID(ctx context.Context, userID uuid.UUID) (*domain.Subscription, error) {
+func (r *SubscriptionRepo) FindLatestByUserID(ctx context.Context, userID uuid.UUID) (*domain.Subscription, error) {
 	var m model.SubscriptionModel
 	err := infra.GetExecutor(ctx, r.db).
 		Preload("User").
@@ -50,7 +50,7 @@ func (r *subscriptionRepo) FindLatestByUserID(ctx context.Context, userID uuid.U
 	return m.ToDomain(), nil
 }
 
-func (r *subscriptionRepo) ListByUserID(ctx context.Context, userID uuid.UUID, page, limit int) ([]domain.Subscription, int64, error) {
+func (r *SubscriptionRepo) ListByUserID(ctx context.Context, userID uuid.UUID, page, limit int) ([]domain.Subscription, int64, error) {
 	var models []model.SubscriptionModel
 	var total int64
 
@@ -69,7 +69,7 @@ func (r *subscriptionRepo) ListByUserID(ctx context.Context, userID uuid.UUID, p
 	return model.ToDomainSubscriptionList(models), total, nil
 }
 
-func (r *subscriptionRepo) ListAll(ctx context.Context, status domain.SubscriptionStatus, page, limit int) ([]domain.Subscription, int64, error) {
+func (r *SubscriptionRepo) ListAll(ctx context.Context, status domain.SubscriptionStatus, page, limit int) ([]domain.Subscription, int64, error) {
 	var models []model.SubscriptionModel
 	var total int64
 
@@ -92,7 +92,7 @@ func (r *subscriptionRepo) ListAll(ctx context.Context, status domain.Subscripti
 	return model.ToDomainSubscriptionList(models), total, nil
 }
 
-func (r *subscriptionRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.SubscriptionStatus, paidAt, expiresAt *time.Time) error {
+func (r *SubscriptionRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.SubscriptionStatus, paidAt, expiresAt *time.Time) error {
 	updates := map[string]interface{}{
 		"status": string(status),
 	}
@@ -107,7 +107,7 @@ func (r *subscriptionRepo) UpdateStatus(ctx context.Context, id uuid.UUID, statu
 		Updates(updates).Error
 }
 
-func (r *subscriptionRepo) UpdateQRCode(ctx context.Context, id uuid.UUID, qrURL, qrString string, expiresAt *time.Time) error {
+func (r *SubscriptionRepo) UpdateQRCode(ctx context.Context, id uuid.UUID, qrURL, qrString string, expiresAt *time.Time) error {
 	return infra.GetExecutor(ctx, r.db).Model(&model.SubscriptionModel{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
@@ -117,7 +117,7 @@ func (r *subscriptionRepo) UpdateQRCode(ctx context.Context, id uuid.UUID, qrURL
 		}).Error
 }
 
-func (r *subscriptionRepo) SumPaidAmount(ctx context.Context) (float64, error) {
+func (r *SubscriptionRepo) SumPaidAmount(ctx context.Context) (float64, error) {
 	var sum float64
 	err := infra.GetExecutor(ctx, r.db).
 		Model(&model.SubscriptionModel{}).

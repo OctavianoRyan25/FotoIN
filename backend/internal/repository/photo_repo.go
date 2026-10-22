@@ -10,15 +10,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type photoRepo struct {
+type PhotoRepo struct {
 	db *gorm.DB
 }
 
-func NewPhotoRepository(db *gorm.DB) domain.PhotoRepository {
-	return &photoRepo{db: db}
+func NewPhotoRepository(db *gorm.DB) *PhotoRepo {
+	return &PhotoRepo{db: db}
 }
 
-func (r *photoRepo) Create(ctx context.Context, photo *domain.Photo) error {
+func (r *PhotoRepo) Create(ctx context.Context, photo *domain.Photo) error {
 	m := model.FromDomainPhoto(photo)
 	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
 		return err
@@ -27,7 +27,7 @@ func (r *photoRepo) Create(ctx context.Context, photo *domain.Photo) error {
 	return nil
 }
 
-func (r *photoRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Photo, error) {
+func (r *PhotoRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Photo, error) {
 	var m model.PhotoModel
 	if err := infra.GetExecutor(ctx, r.db).First(&m, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (r *photoRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Photo, 
 	return m.ToDomain(), nil
 }
 
-func (r *photoRepo) FindByGalleryID(ctx context.Context, galleryID uuid.UUID, page, limit int) ([]domain.Photo, int64, error) {
+func (r *PhotoRepo) FindByGalleryID(ctx context.Context, galleryID uuid.UUID, page, limit int) ([]domain.Photo, int64, error) {
 	var models []model.PhotoModel
 	var total int64
 
@@ -53,11 +53,11 @@ func (r *photoRepo) FindByGalleryID(ctx context.Context, galleryID uuid.UUID, pa
 	return model.ToDomainPhotoList(models), total, nil
 }
 
-func (r *photoRepo) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *PhotoRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return infra.GetExecutor(ctx, r.db).Delete(&model.PhotoModel{}, "id = ?", id).Error
 }
 
-func (r *photoRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Photo, error) {
+func (r *PhotoRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Photo, error) {
 	var models []model.PhotoModel
 	if err := infra.GetExecutor(ctx, r.db).Where("id IN ?", ids).Find(&models).Error; err != nil {
 		return nil, err
@@ -65,11 +65,11 @@ func (r *photoRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Ph
 	return model.ToDomainPhotoList(models), nil
 }
 
-func (r *photoRepo) BulkDelete(ctx context.Context, galleryID uuid.UUID) error {
+func (r *PhotoRepo) BulkDelete(ctx context.Context, galleryID uuid.UUID) error {
 	return infra.GetExecutor(ctx, r.db).Where("gallery_id = ?", galleryID).Delete(&model.PhotoModel{}).Error
 }
 
-func (r *photoRepo) FindByEventID(ctx context.Context, eventID uuid.UUID, page, limit int) ([]domain.Photo, int64, error) {
+func (r *PhotoRepo) FindByEventID(ctx context.Context, eventID uuid.UUID, page, limit int) ([]domain.Photo, int64, error) {
 	var models []model.PhotoModel
 	var total int64
 

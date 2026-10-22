@@ -10,15 +10,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type walletRepo struct {
+type WalletRepo struct {
 	db *gorm.DB
 }
 
-func NewWalletRepository(db *gorm.DB) domain.WalletRepository {
-	return &walletRepo{db: db}
+func NewWalletRepository(db *gorm.DB) *WalletRepo {
+	return &WalletRepo{db: db}
 }
 
-func (r *walletRepo) GetBalance(ctx context.Context, photographerID uuid.UUID) (float64, error) {
+func (r *WalletRepo) GetBalance(ctx context.Context, photographerID uuid.UUID) (float64, error) {
 	var user model.UserModel
 	if err := infra.GetExecutor(ctx, r.db).Select("wallet_balance").First(&user, "id = ?", photographerID).Error; err != nil {
 		return 0, err
@@ -26,7 +26,7 @@ func (r *walletRepo) GetBalance(ctx context.Context, photographerID uuid.UUID) (
 	return user.WalletBalance, nil
 }
 
-func (r *walletRepo) AddTransaction(ctx context.Context, tx *domain.WalletTransaction) error {
+func (r *WalletRepo) AddTransaction(ctx context.Context, tx *domain.WalletTransaction) error {
 	m := model.FromDomainWalletTransaction(tx)
 	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
 		return err
@@ -35,7 +35,7 @@ func (r *walletRepo) AddTransaction(ctx context.Context, tx *domain.WalletTransa
 	return nil
 }
 
-func (r *walletRepo) GetTransactions(ctx context.Context, photographerID uuid.UUID, page, limit int) ([]domain.WalletTransaction, int64, error) {
+func (r *WalletRepo) GetTransactions(ctx context.Context, photographerID uuid.UUID, page, limit int) ([]domain.WalletTransaction, int64, error) {
 	var models []model.WalletTransactionModel
 	var total int64
 
@@ -53,7 +53,7 @@ func (r *walletRepo) GetTransactions(ctx context.Context, photographerID uuid.UU
 	return model.ToDomainWalletTransactionList(models), total, nil
 }
 
-func (r *walletRepo) CreateWithdrawal(ctx context.Context, req *domain.WithdrawalRequest) error {
+func (r *WalletRepo) CreateWithdrawal(ctx context.Context, req *domain.WithdrawalRequest) error {
 	m := model.FromDomainWithdrawalRequest(req)
 	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
 		return err
@@ -62,7 +62,7 @@ func (r *walletRepo) CreateWithdrawal(ctx context.Context, req *domain.Withdrawa
 	return nil
 }
 
-func (r *walletRepo) FindWithdrawalByID(ctx context.Context, id uuid.UUID) (*domain.WithdrawalRequest, error) {
+func (r *WalletRepo) FindWithdrawalByID(ctx context.Context, id uuid.UUID) (*domain.WithdrawalRequest, error) {
 	var m model.WithdrawalRequestModel
 	if err := infra.GetExecutor(ctx, r.db).Preload("Photographer").First(&m, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (r *walletRepo) FindWithdrawalByID(ctx context.Context, id uuid.UUID) (*dom
 	return m.ToDomain(), nil
 }
 
-func (r *walletRepo) ListWithdrawals(ctx context.Context, status domain.WithdrawalStatus, page, limit int) ([]domain.WithdrawalRequest, int64, error) {
+func (r *WalletRepo) ListWithdrawals(ctx context.Context, status domain.WithdrawalStatus, page, limit int) ([]domain.WithdrawalRequest, int64, error) {
 	var models []model.WithdrawalRequestModel
 	var total int64
 
@@ -92,7 +92,7 @@ func (r *walletRepo) ListWithdrawals(ctx context.Context, status domain.Withdraw
 	return model.ToDomainWithdrawalRequestList(models), total, nil
 }
 
-func (r *walletRepo) ListWithdrawalsByPhotographer(ctx context.Context, photographerID uuid.UUID, page, limit int) ([]domain.WithdrawalRequest, int64, error) {
+func (r *WalletRepo) ListWithdrawalsByPhotographer(ctx context.Context, photographerID uuid.UUID, page, limit int) ([]domain.WithdrawalRequest, int64, error) {
 	var models []model.WithdrawalRequestModel
 	var total int64
 
@@ -110,7 +110,7 @@ func (r *walletRepo) ListWithdrawalsByPhotographer(ctx context.Context, photogra
 	return model.ToDomainWithdrawalRequestList(models), total, nil
 }
 
-func (r *walletRepo) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID, status domain.WithdrawalStatus, processedBy uuid.UUID, notes string) error {
+func (r *WalletRepo) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID, status domain.WithdrawalStatus, processedBy uuid.UUID, notes string) error {
 	return infra.GetExecutor(ctx, r.db).Model(&model.WithdrawalRequestModel{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{

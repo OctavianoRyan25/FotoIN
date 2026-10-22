@@ -9,15 +9,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type adminRepo struct {
+type AdminRepo struct {
 	db *gorm.DB
 }
 
-func NewAdminRepository(db *gorm.DB) domain.AdminRepository {
-	return &adminRepo{db: db}
+func NewAdminRepository(db *gorm.DB) *AdminRepo {
+	return &AdminRepo{db: db}
 }
 
-func (r *adminRepo) GetRevenueStats(ctx context.Context) (*domain.AdminRevenueStats, error) {
+func (r *AdminRepo) GetRevenueStats(ctx context.Context) (*domain.AdminRevenueStats, error) {
 	executor := infra.GetExecutor(ctx, r.db)
 	var stats domain.AdminRevenueStats
 

@@ -13,15 +13,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type orderRepo struct {
+type OrderRepo struct {
 	db *gorm.DB
 }
 
-func NewOrderRepository(db *gorm.DB) domain.OrderRepository {
-	return &orderRepo{db: db}
+func NewOrderRepository(db *gorm.DB) *OrderRepo {
+	return &OrderRepo{db: db}
 }
 
-func (r *orderRepo) Create(ctx context.Context, order *domain.Order) error {
+func (r *OrderRepo) Create(ctx context.Context, order *domain.Order) error {
 	m := model.FromDomainOrder(order)
 	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
 		return err
@@ -30,7 +30,7 @@ func (r *orderRepo) Create(ctx context.Context, order *domain.Order) error {
 	return nil
 }
 
-func (r *orderRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Order, error) {
+func (r *OrderRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Order, error) {
 	var m model.OrderModel
 	if err := infra.GetExecutor(ctx, r.db).Preload("OrderItems.Photo").Preload("Gallery").First(&m, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (r *orderRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Order, 
 	return m.ToDomain(), nil
 }
 
-func (r *orderRepo) FindByBuyerEmail(ctx context.Context, email string, page, limit int) ([]domain.Order, int64, error) {
+func (r *OrderRepo) FindByBuyerEmail(ctx context.Context, email string, page, limit int) ([]domain.Order, int64, error) {
 	var models []model.OrderModel
 	var total int64
 
@@ -56,7 +56,7 @@ func (r *orderRepo) FindByBuyerEmail(ctx context.Context, email string, page, li
 	return model.ToDomainOrderList(models), total, nil
 }
 
-func (r *orderRepo) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status domain.PaymentStatus, gatewayID, gatewayResp string) error {
+func (r *OrderRepo) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status domain.PaymentStatus, gatewayID, gatewayResp string) error {
 	respJSON, _ := json.Marshal(gatewayResp)
 	respStr := string(respJSON)
 	return infra.GetExecutor(ctx, r.db).Model(&model.OrderModel{}).
@@ -68,7 +68,7 @@ func (r *orderRepo) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, statu
 		}).Error
 }
 
-func (r *orderRepo) UpdateQRCode(ctx context.Context, id uuid.UUID, qrURL, qrString string, expiresAt *time.Time) error {
+func (r *OrderRepo) UpdateQRCode(ctx context.Context, id uuid.UUID, qrURL, qrString string, expiresAt *time.Time) error {
 	return infra.GetExecutor(ctx, r.db).Model(&model.OrderModel{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
@@ -78,7 +78,7 @@ func (r *orderRepo) UpdateQRCode(ctx context.Context, id uuid.UUID, qrURL, qrStr
 		}).Error
 }
 
-func (r *orderRepo) UpdateDownloadURLs(ctx context.Context, orderID uuid.UUID, items []domain.OrderItem) error {
+func (r *OrderRepo) UpdateDownloadURLs(ctx context.Context, orderID uuid.UUID, items []domain.OrderItem) error {
 	executor := infra.GetExecutor(ctx, r.db)
 	for _, item := range items {
 		if err := executor.Model(&model.OrderItemModel{}).
@@ -90,13 +90,13 @@ func (r *orderRepo) UpdateDownloadURLs(ctx context.Context, orderID uuid.UUID, i
 	return nil
 }
 
-func (r *orderRepo) UpdateDownloadExpiresAt(ctx context.Context, orderID uuid.UUID, expiresAt time.Time) error {
+func (r *OrderRepo) UpdateDownloadExpiresAt(ctx context.Context, orderID uuid.UUID, expiresAt time.Time) error {
 	return infra.GetExecutor(ctx, r.db).Model(&model.OrderModel{}).
 		Where("id = ?", orderID).
 		Update("download_expires_at", expiresAt).Error
 }
 
-func (r *orderRepo) FindByGatewayID(ctx context.Context, gatewayID string) (*domain.Order, error) {
+func (r *OrderRepo) FindByGatewayID(ctx context.Context, gatewayID string) (*domain.Order, error) {
 	var m model.OrderModel
 	if err := infra.GetExecutor(ctx, r.db).Preload("OrderItems").First(&m, "payment_gateway_id = ?", gatewayID).Error; err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (r *orderRepo) FindByGatewayID(ctx context.Context, gatewayID string) (*dom
 	return m.ToDomain(), nil
 }
 
-func (r *orderRepo) SumPlatformFeeByGallery(ctx context.Context, galleryID uuid.UUID) (float64, error) {
+func (r *OrderRepo) SumPlatformFeeByGallery(ctx context.Context, galleryID uuid.UUID) (float64, error) {
 	var sum float64
 	err := infra.GetExecutor(ctx, r.db).Model(&model.OrderModel{}).
 		Select("COALESCE(SUM(platform_fee), 0)").
@@ -113,7 +113,7 @@ func (r *orderRepo) SumPlatformFeeByGallery(ctx context.Context, galleryID uuid.
 	return sum, err
 }
 
-func (r *orderRepo) CountByGallery(ctx context.Context, galleryID uuid.UUID) (int64, error) {
+func (r *OrderRepo) CountByGallery(ctx context.Context, galleryID uuid.UUID) (int64, error) {
 	var count int64
 	err := infra.GetExecutor(ctx, r.db).Model(&model.OrderModel{}).
 		Where("gallery_id = ? AND payment_status = ?", galleryID, domain.PaymentPaid).
