@@ -3,8 +3,9 @@ package infra
 import (
 	"fmt"
 	"net/smtp"
-	"os"
 	"strings"
+
+	"fotoin/backend/internal/config"
 )
 
 type MailClient struct {
@@ -15,13 +16,13 @@ type MailClient struct {
 	from string
 }
 
-func NewMailClient() *MailClient {
+func NewMailClient(cfg config.SMTPConfig) *MailClient {
 	mailClient := &MailClient{
-		host: os.Getenv("SMTP_HOST"),
-		port: os.Getenv("SMTP_PORT"),
-		user: os.Getenv("SMTP_USER"),
-		pass: os.Getenv("SMTP_PASS"),
-		from: os.Getenv("SMTP_FROM"),
+		host: cfg.Host,
+		port: cfg.Port,
+		user: cfg.Username,
+		pass: cfg.Password,
+		from: cfg.From,
 	}
 
 	return mailClient

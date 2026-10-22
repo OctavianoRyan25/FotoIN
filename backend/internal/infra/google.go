@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"sync"
 	"time"
+
+	"fotoin/backend/internal/config"
 )
 
 // GoogleUserInfo is the data returned from Google's userinfo endpoint.
@@ -36,15 +37,11 @@ type Google struct {
 	states map[string]oauthState // state -> expiry
 }
 
-func NewGoogle() *Google {
-	redirectURL := os.Getenv("GOOGLE_REDIRECT_URL")
-	if redirectURL == "" {
-		redirectURL = "http://localhost:8080/api/v1/auth/google/callback"
-	}
+func NewGoogle(cfg config.GoogleConfig) *Google {
 	return &Google{
-		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:  redirectURL,
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.ClientSecret,
+		RedirectURL:  cfg.RedirectURL,
 		states:       make(map[string]oauthState),
 	}
 }

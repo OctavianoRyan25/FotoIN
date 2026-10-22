@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"fotoin/backend/internal/domain"
-	"fotoin/backend/internal/infra"
 
 	"github.com/google/uuid"
 )
@@ -19,8 +18,8 @@ type OrderUsecase struct {
 	photoRepo      domain.PhotoRepository
 	userRepo       domain.UserRepository
 	walletRepo     domain.WalletRepository
-	s3             *infra.S3Client
-	mail           *infra.MailClient
+	s3             domain.StorageService
+	mail           domain.MailService
 	txManager      domain.TxManager
 	paymentService domain.PaymentService
 }
@@ -32,8 +31,8 @@ func NewOrderUsecase(
 	photoRepo domain.PhotoRepository,
 	userRepo domain.UserRepository,
 	walletRepo domain.WalletRepository,
-	s3 *infra.S3Client,
-	mail *infra.MailClient,
+	s3 domain.StorageService,
+	mail domain.MailService,
 	txManager domain.TxManager,
 	paymentService domain.PaymentService,
 ) *OrderUsecase {
@@ -238,7 +237,6 @@ func (u *OrderUsecase) ProcessPaymentSuccess(ctx context.Context, gatewayOrderID
 		// 2. Generate presigned download URLs (72h expiry)
 		downloadExpiry := time.Now().Add(72 * time.Hour)
 		var updatedItems []domain.OrderItem
-		var mailItems []infra.DownloadItem
 
 		for i, item := range order.OrderItems {
 			photo, err := u.photoRepo.FindByID(txCtx, item.PhotoID)
@@ -258,10 +256,6 @@ func (u *OrderUsecase) ProcessPaymentSuccess(ctx context.Context, gatewayOrderID
 
 			order.OrderItems[i].DownloadURL = &downloadURL
 			updatedItems = append(updatedItems, order.OrderItems[i])
-			mailItems = append(mailItems, infra.DownloadItem{
-				Filename:    photo.Filename,
-				DownloadURL: downloadURL,
-			})
 		}
 
 		if err := u.orderRepo.UpdateDownloadURLs(txCtx, order.ID, updatedItems); err != nil {

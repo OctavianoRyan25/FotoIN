@@ -9,6 +9,7 @@ import (
 	"fotoin/backend/internal/infra"
 	"fotoin/backend/internal/middleware"
 	"fotoin/backend/internal/usecase"
+	"fotoin/backend/internal/util"
 	"fotoin/backend/pkg/response"
 	"strconv"
 
@@ -234,7 +235,15 @@ func (h *PhotoHandler) ProxyUpload(c echo.Context) error {
 	ext := filepath.Ext(header.Filename)
 	s3Key := fmt.Sprintf("galleries/%s/photos/%s%s", galleryID, photoID, ext)
 
-	if err := h.s3.UploadObject(s3Key, contentType, file, header.Size); err != nil {
+	// Auto-compression: compress if image > 3MB to save egress & storage costs
+	uploadReader, uploadSize, finalContentType, err := util.CompressImage(file, header.Filename, header.Size, contentType)
+	if err != nil {
+		uploadReader = file
+		uploadSize = header.Size
+		finalContentType = contentType
+	}
+
+	if err := h.s3.UploadObject(s3Key, finalContentType, uploadReader, uploadSize); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "S3 upload failed: " + err.Error(),
 		})
@@ -245,7 +254,7 @@ func (h *PhotoHandler) ProxyUpload(c echo.Context) error {
 		GalleryID: galleryID.String(),
 		S3Key:     s3Key,
 		Filename:  header.Filename,
-		SizeBytes: header.Size,
+		SizeBytes: uploadSize,
 	})
 	if err != nil {
 		return response.BadRequest(c, err.Error(), nil)
@@ -284,7 +293,15 @@ func (h *PhotoHandler) ProxyEventUpload(c echo.Context) error {
 	ext := filepath.Ext(header.Filename)
 	s3Key := fmt.Sprintf("events/%s/photos/%s%s", eventID, photoID, ext)
 
-	if err := h.s3.UploadObject(s3Key, contentType, file, header.Size); err != nil {
+	// Auto-compression: compress if image > 3MB to save egress & storage costs
+	uploadReader, uploadSize, finalContentType, err := util.CompressImage(file, header.Filename, header.Size, contentType)
+	if err != nil {
+		uploadReader = file
+		uploadSize = header.Size
+		finalContentType = contentType
+	}
+
+	if err := h.s3.UploadObject(s3Key, finalContentType, uploadReader, uploadSize); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "S3 upload failed: " + err.Error(),
 		})
@@ -294,7 +311,7 @@ func (h *PhotoHandler) ProxyEventUpload(c echo.Context) error {
 		EventID:   eventID.String(),
 		S3Key:     s3Key,
 		Filename:  header.Filename,
-		SizeBytes: header.Size,
+		SizeBytes: uploadSize,
 	})
 	if err != nil {
 		return response.BadRequest(c, err.Error(), nil)

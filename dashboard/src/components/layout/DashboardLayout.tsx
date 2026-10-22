@@ -16,6 +16,7 @@ import {
   Bell,
   Moon,
   Sun,
+  Sparkles,
   Calendar,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -29,14 +30,16 @@ const photographerNav = [
   { to: '/dashboard/events', label: 'Event', icon: Calendar },
   { to: '/dashboard/galleries', label: 'Galeri', icon: Images },
   { to: '/dashboard/wallet', label: 'Dompet', icon: Wallet },
+  { to: '/dashboard/subscription', label: 'Langganan', icon: Sparkles },
   { to: '/dashboard/settings', label: 'Pengaturan', icon: Settings },
 ]
 
 const adminNav = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/dashboard/users', label: 'Pengguna', icon: Users },
-  { to: '/dashboard/revenue', label: 'Revenue', icon: TrendingUp },
-  { to: '/dashboard/withdrawals', label: 'Penarikan', icon: Wallet },
+  { to: '/dashboard/revenue', label: 'Revenue Platform', icon: TrendingUp },
+  { to: '/dashboard/withdrawals', label: 'Penarikan Dana', icon: Wallet },
+  { to: '/dashboard/subscriptions', label: 'Langganan', icon: Sparkles },
 ]
 
 export function DashboardLayout() {

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"fotoin/backend/internal/domain"
-	"fotoin/backend/internal/infra"
 
 	"github.com/google/uuid"
 )
@@ -16,10 +15,10 @@ import (
 type GalleryUsecase struct {
 	galleryRepo domain.GalleryRepository
 	userRepo    domain.UserRepository
-	s3          *infra.S3Client
+	s3          domain.StorageService
 }
 
-func NewGalleryUsecase(galleryRepo domain.GalleryRepository, userRepo domain.UserRepository, s3 *infra.S3Client) *GalleryUsecase {
+func NewGalleryUsecase(galleryRepo domain.GalleryRepository, userRepo domain.UserRepository, s3 domain.StorageService) *GalleryUsecase {
 	return &GalleryUsecase{galleryRepo: galleryRepo, userRepo: userRepo, s3: s3}
 }
 
@@ -134,7 +133,7 @@ func (u *GalleryUsecase) GetByID(ctx context.Context, id uuid.UUID) (*domain.Gal
 	return u.galleryRepo.FindByID(ctx, id)
 }
 
-func (u *GalleryUsecase) GetBySlug(ctx context.Context, slug string, s3 *infra.S3Client) (*domain.Gallery, error) {
+func (u *GalleryUsecase) GetBySlug(ctx context.Context, slug string) (*domain.Gallery, error) {
 	gallery, err := u.galleryRepo.FindBySlug(ctx, slug)
 	if err != nil {
 		return nil, errors.New("gallery not found or inactive")

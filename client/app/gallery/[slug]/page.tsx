@@ -27,6 +27,28 @@ import {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 
+function WatermarkOverlay() {
+  return (
+    <div className="absolute inset-0 pointer-events-none select-none overflow-hidden flex items-center justify-center">
+      <div className="absolute inset-0 opacity-[0.16] flex flex-wrap items-center justify-around gap-10 rotate-[-25deg] scale-125">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span
+            key={i}
+            className="text-white text-xs sm:text-sm font-extrabold uppercase tracking-widest drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+          >
+            FotoIN • Preview
+          </span>
+        ))}
+      </div>
+      <div className="opacity-30 px-2.5 py-0.5 rounded border border-white/50 bg-black/30 backdrop-blur-[1px] rotate-[-12deg]">
+        <span className="text-white text-[11px] font-bold tracking-wider uppercase drop-shadow">
+          FotoIN
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function GalleryPage() {
   const { slug } = useParams<{ slug: string }>();
   const [gallery, setGallery] = useState<Gallery | null>(null);
@@ -351,6 +373,7 @@ function GalleryView({
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
+                <WatermarkOverlay />
                 <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-[#1F1B16]/55 backdrop-blur-sm">
                   <span className="text-[10px] font-[family-name:var(--font-mono)] text-[#F6F3EC] tracking-wide">
                     No. {String(i + 1).padStart(3, "0")}
@@ -545,11 +568,14 @@ function GalleryView({
             className="max-w-4xl max-h-[90vh] p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <img
-              src={selectedPhoto.preview_url}
-              alt={selectedPhoto.filename}
-              className="max-w-full max-h-[80vh] object-contain rounded-lg"
-            />
+            <div className="relative">
+              <img
+                src={selectedPhoto.preview_url}
+                alt={selectedPhoto.filename}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              />
+              <WatermarkOverlay />
+            </div>
             <div className="mt-4 flex items-center justify-between">
               <p className="text-[#F6F3EC]/70 text-sm font-[family-name:var(--font-mono)]">
                 {selectedPhoto.filename}

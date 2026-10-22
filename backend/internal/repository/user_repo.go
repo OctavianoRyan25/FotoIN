@@ -4,6 +4,7 @@ import (
 	"context"
 	"fotoin/backend/internal/domain"
 	"fotoin/backend/internal/infra"
+	"fotoin/backend/internal/model"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,60 +20,73 @@ func NewUserRepository(db *gorm.DB) domain.UserRepository {
 }
 
 func (r *userRepo) Create(ctx context.Context, user *domain.User) error {
-	return infra.GetExecutor(ctx, r.db).Create(user).Error
+	m := model.FromDomainUser(user)
+	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
+		return err
+	}
+	*user = *m.ToDomain()
+	return nil
 }
 
 func (r *userRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	var user domain.User
-	if err := infra.GetExecutor(ctx, r.db).First(&user, "id = ?", id).Error; err != nil {
+	var m model.UserModel
+	if err := infra.GetExecutor(ctx, r.db).First(&m, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return m.ToDomain(), nil
 }
 
 func (r *userRepo) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
-	var user domain.User
-	if err := infra.GetExecutor(ctx, r.db).First(&user, "email = ?", email).Error; err != nil {
+	var m model.UserModel
+	if err := infra.GetExecutor(ctx, r.db).First(&m, "email = ?", email).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return m.ToDomain(), nil
 }
 
 func (r *userRepo) Update(ctx context.Context, user *domain.User) error {
-	return infra.GetExecutor(ctx, r.db).Save(user).Error
+	m := model.FromDomainUser(user)
+	if err := infra.GetExecutor(ctx, r.db).Save(m).Error; err != nil {
+		return err
+	}
+	*user = *m.ToDomain()
+	return nil
 }
 
 func (r *userRepo) UpdateStorageUsed(ctx context.Context, id uuid.UUID, deltaBytes int64) error {
-	return infra.GetExecutor(ctx, r.db).Model(&domain.User{}).
+	return infra.GetExecutor(ctx, r.db).Model(&model.UserModel{}).
 		Where("id = ?", id).
 		Update("storage_used_bytes", gorm.Expr("storage_used_bytes + ?", deltaBytes)).Error
 }
 
 func (r *userRepo) UpdateWalletBalance(ctx context.Context, id uuid.UUID, amount float64) error {
-	return infra.GetExecutor(ctx, r.db).Model(&domain.User{}).
+	return infra.GetExecutor(ctx, r.db).Model(&model.UserModel{}).
 		Where("id = ?", id).
 		Update("wallet_balance", gorm.Expr("wallet_balance + ?", amount)).Error
 }
 
 func (r *userRepo) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
-	return infra.GetExecutor(ctx, r.db).Model(&domain.User{}).
+	return infra.GetExecutor(ctx, r.db).Model(&model.UserModel{}).
 		Where("id = ?", id).
 		Update("password_hash", passwordHash).Error
 }
 
 func (r *userRepo) CreatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
-	return infra.GetExecutor(ctx, r.db).Create(&domain.User{
+	return infra.GetExecutor(ctx, r.db).Create(&model.UserModel{
 		ID:           id,
 		PasswordHash: passwordHash,
 	}).Error
 }
 
-func (r *userRepo) List(ctx context.Context, page, limit int, search string) ([]domain.User, int64, error) {
-	var users []domain.User
+func (r *userRepo) List(ctx context.Context, page, limit int, search string, role string) ([]domain.User, int64, error) {
+	var models []model.UserModel
 	var total int64
 
 	executor := infra.GetExecutor(ctx, r.db)
-	query := executor.Model(&domain.User{}).Where("role = ?", domain.RolePhotographer)
+	query := executor.Model(&model.UserModel{})
+	if role != "" && role != "all" {
+		query = query.Where("role = ?", role)
+	}
 	if search != "" {
 		query = query.Where("name ILIKE ? OR email ILIKE ?", "%"+search+"%", "%"+search+"%")
 	}
@@ -82,25 +96,25 @@ func (r *userRepo) List(ctx context.Context, page, limit int, search string) ([]
 	}
 
 	offset := (page - 1) * limit
-	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&users).Error; err != nil {
+	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 
-	return users, total, nil
+	return model.ToDomainUserList(models), total, nil
 }
 
 func (r *userRepo) SuspendUser(ctx context.Context, id uuid.UUID, suspended bool) error {
-	return infra.GetExecutor(ctx, r.db).Model(&domain.User{}).
+	return infra.GetExecutor(ctx, r.db).Model(&model.UserModel{}).
 		Where("id = ?", id).
 		Update("is_suspended", suspended).Error
 }
 
 func (r *userRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return infra.GetExecutor(ctx, r.db).Where("id = ?", id).Delete(&domain.User{}).Error
+	return infra.GetExecutor(ctx, r.db).Where("id = ?", id).Delete(&model.UserModel{}).Error
 }
 
 func (r *userRepo) AddOTP(ctx context.Context, otp string, expiresAt *time.Time, id uuid.UUID) error {
-	return infra.GetExecutor(ctx, r.db).Model(&domain.User{}).
+	return infra.GetExecutor(ctx, r.db).Model(&model.UserModel{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"otp_hash":       otp,

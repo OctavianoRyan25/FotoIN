@@ -76,3 +76,11 @@ func GetUserID(c echo.Context) (uuid.UUID, error) {
 	userIDStr, _ := c.Get("user_id").(string)
 	return uuid.Parse(userIDStr)
 }
+
+func GetUserRole(c echo.Context) (domain.UserRole, error) {
+	role, ok := c.Get("user_role").(domain.UserRole)
+	if !ok {
+		return "", echo.ErrUnauthorized
+	}
+	return role, nil
+}

@@ -145,7 +145,7 @@ func (h *GalleryHandler) Delete(c echo.Context) error {
 func (h *GalleryHandler) GetPublicGallery(c echo.Context) error {
 	slug := c.Param("slug")
 
-	gallery, err := h.galleryUsecase.GetBySlug(c.Request().Context(), slug, nil)
+	gallery, err := h.galleryUsecase.GetBySlug(c.Request().Context(), slug)
 	if err != nil {
 		return response.NotFound(c, err.Error())
 	}

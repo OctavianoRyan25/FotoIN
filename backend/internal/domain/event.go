@@ -8,23 +8,23 @@ import (
 )
 
 type Event struct {
-	ID             uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	PhotographerID uuid.UUID  `gorm:"type:uuid;not null;index" json:"photographer_id"`
-	Title          string     `gorm:"size:255;not null" json:"title"`
-	Slug           string     `gorm:"size:255;uniqueIndex;not null" json:"slug"`
-	EventDate      *time.Time `gorm:"null" json:"event_date,omitempty"`
-	Location       string     `gorm:"size:255" json:"location,omitempty"`
-	Description    string     `gorm:"type:text" json:"description,omitempty"`
-	PricePerPhoto  float64    `gorm:"type:decimal(12,2);not null;default:25000" json:"price_per_photo"`
-	CoverPhotoURL  string     `gorm:"size:500" json:"cover_photo_url,omitempty"`
-	IsActive       bool       `gorm:"default:true" json:"is_active"`
-	ExpiresAt      *time.Time `gorm:"null" json:"expires_at,omitempty"`
+	ID             uuid.UUID  `json:"id"`
+	PhotographerID uuid.UUID  `json:"photographer_id"`
+	Title          string     `json:"title"`
+	Slug           string     `json:"slug"`
+	EventDate      *time.Time `json:"event_date,omitempty"`
+	Location       string     `json:"location,omitempty"`
+	Description    string     `json:"description,omitempty"`
+	PricePerPhoto  float64    `json:"price_per_photo"`
+	CoverPhotoURL  string     `json:"cover_photo_url,omitempty"`
+	IsActive       bool       `json:"is_active"`
+	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 
-	Photographer User      `gorm:"foreignKey:PhotographerID" json:"photographer,omitempty"`
-	Galleries    []Gallery `gorm:"foreignKey:EventID" json:"galleries,omitempty"`
-	Photos       []Photo   `gorm:"foreignKey:EventID" json:"photos,omitempty"`
+	Photographer *User     `json:"photographer,omitempty"`
+	Galleries    []Gallery `json:"galleries,omitempty"`
+	Photos       []Photo   `json:"photos,omitempty"`
 }
 
 type EventRepository interface {

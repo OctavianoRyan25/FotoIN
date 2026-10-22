@@ -119,6 +119,11 @@ func (u *WalletUsecase) RequestWithdrawal(ctx context.Context, photographerID uu
 	return withdrawalReq, nil
 }
 
+// ListWithdrawals — Super Admin
+func (u *WalletUsecase) ListWithdrawals(ctx context.Context, status domain.WithdrawalStatus, page, limit int) ([]domain.WithdrawalRequest, int64, error) {
+	return u.walletRepo.ListWithdrawals(ctx, status, page, limit)
+}
+
 // ApproveWithdrawal — Super Admin only
 func (u *WalletUsecase) ApproveWithdrawal(ctx context.Context, withdrawalID, adminID uuid.UUID, notes string) error {
 	req, err := u.walletRepo.FindWithdrawalByID(ctx, withdrawalID)

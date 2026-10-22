@@ -30,26 +30,26 @@ const (
 )
 
 type User struct {
-	ID                    uuid.UUID        `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	Name                  string           `gorm:"size:255;not null" json:"name"`
-	Email                 string           `gorm:"size:255;uniqueIndex;not null" json:"email"`
-	PasswordHash          string           `gorm:"size:255;not null" json:"-"`
-	OTPHash               string           `gorm:"size:255;null" json:"-"`
-	OTPExpiresAt          *time.Time       `gorm:"null" json:"-"`
-	Role                  UserRole         `gorm:"type:varchar(20);not null;default:'photographer'" json:"role"`
-	SubscriptionTier      SubscriptionTier `gorm:"type:varchar(20);not null;default:'basic'" json:"subscription_tier"`
-	SubscriptionExpiresAt *time.Time       `gorm:"null" json:"subscription_expires_at,omitempty"`
-	IsVerified            bool             `gorm:"default:false" json:"is_verified"`
-	IsSuspended           bool             `gorm:"default:false" json:"is_suspended"`
-	StorageUsedBytes      int64            `gorm:"default:0" json:"storage_used_bytes"`
-	WalletBalance         float64          `gorm:"type:decimal(14,2);default:0" json:"wallet_balance"`
+	ID                    uuid.UUID        `json:"id"`
+	Name                  string           `json:"name"`
+	Email                 string           `json:"email"`
+	PasswordHash          string           `json:"-"`
+	OTPHash               string           `json:"-"`
+	OTPExpiresAt          *time.Time       `json:"-"`
+	Role                  UserRole         `json:"role"`
+	SubscriptionTier      SubscriptionTier `json:"subscription_tier"`
+	SubscriptionExpiresAt *time.Time       `json:"subscription_expires_at,omitempty"`
+	IsVerified            bool             `json:"is_verified"`
+	IsSuspended           bool             `json:"is_suspended"`
+	StorageUsedBytes      int64            `json:"storage_used_bytes"`
+	WalletBalance         float64          `json:"wallet_balance"`
 	CreatedAt             time.Time        `json:"created_at"`
 	UpdatedAt             time.Time        `json:"updated_at"`
 
-	HasPassword bool `gorm:"-" json:"has_password"`
+	HasPassword bool `json:"has_password"`
 
-	// Relations
-	Galleries []Gallery `gorm:"foreignKey:PhotographerID" json:"-"`
+	// Domain relation
+	Galleries []Gallery `json:"galleries,omitempty"`
 }
 
 func (u *User) CommissionRate() float64 {
@@ -80,7 +80,7 @@ type UserRepository interface {
 	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 	CreatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 	AddOTP(ctx context.Context, otp string, expiresAt *time.Time, id uuid.UUID) error
-	List(ctx context.Context, page, limit int, search string) ([]User, int64, error)
+	List(ctx context.Context, page, limit int, search string, role string) ([]User, int64, error)
 	SuspendUser(ctx context.Context, id uuid.UUID, suspended bool) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

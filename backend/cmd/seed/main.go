@@ -10,18 +10,21 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
+	"fotoin/backend/internal/config"
 	"fotoin/backend/internal/domain"
 	"fotoin/backend/internal/infra"
+	"fotoin/backend/internal/repository"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type seedUser struct {
@@ -55,26 +58,51 @@ func main() {
 		log.Println("Warning: .env file not found, using environment variables")
 	}
 
-	db := infra.NewDatabase()
+	if err := run(); err != nil {
+		log.Printf("Seeder failed: %v", err)
+		os.Exit(1)
+	}
+}
+
+func run() (err error) {
+	ctx := context.Background()
+	cfg := config.LoadConfig()
+	db, err := infra.NewDatabase(ctx, cfg.Database)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		sqlDB, closeErr := db.DB()
+		if closeErr == nil {
+			closeErr = sqlDB.Close()
+		}
+		if closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close database: %w", closeErr))
+		}
+	}()
 
 	// Auto-migrate so tables exist
-	infra.AutoMigrate(db)
+	if err := infra.AutoMigrate(ctx, db); err != nil {
+		return err
+	}
 
 	log.Println("─── FotoIN Database Seeder ───────────────────────────────")
 
+	userRepo := repository.NewUserRepository(db)
 	for _, s := range seeds {
-		upsertUser(db, s)
+		upsertUser(userRepo, s)
 	}
 
 	log.Println("─── Seeding complete ─────────────────────────────────────")
 	printSummary()
+	return nil
 }
 
-func upsertUser(db *gorm.DB, s seedUser) {
-	var existing domain.User
-	err := db.Where("email = ?", s.Email).First(&existing).Error
+func upsertUser(userRepo domain.UserRepository, s seedUser) {
+	ctx := context.Background()
+	existing, err := userRepo.FindByEmail(ctx, s.Email)
 
-	if err == nil {
+	if err == nil && existing != nil {
 		log.Printf("  [SKIP] %s (%s) already exists\n", s.Name, s.Email)
 		return
 	}
@@ -97,7 +125,7 @@ func upsertUser(db *gorm.DB, s seedUser) {
 		IsSuspended:           false,
 	}
 
-	if err := db.Create(user).Error; err != nil {
+	if err := userRepo.Create(ctx, user); err != nil {
 		log.Printf("  [ERROR] Creating %s: %v\n", s.Email, err)
 		return
 	}

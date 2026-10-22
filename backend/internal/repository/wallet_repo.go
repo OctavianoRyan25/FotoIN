@@ -4,6 +4,7 @@ import (
 	"context"
 	"fotoin/backend/internal/domain"
 	"fotoin/backend/internal/infra"
+	"fotoin/backend/internal/model"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -18,7 +19,7 @@ func NewWalletRepository(db *gorm.DB) domain.WalletRepository {
 }
 
 func (r *walletRepo) GetBalance(ctx context.Context, photographerID uuid.UUID) (float64, error) {
-	var user domain.User
+	var user model.UserModel
 	if err := infra.GetExecutor(ctx, r.db).Select("wallet_balance").First(&user, "id = ?", photographerID).Error; err != nil {
 		return 0, err
 	}
@@ -26,45 +27,55 @@ func (r *walletRepo) GetBalance(ctx context.Context, photographerID uuid.UUID) (
 }
 
 func (r *walletRepo) AddTransaction(ctx context.Context, tx *domain.WalletTransaction) error {
-	return infra.GetExecutor(ctx, r.db).Create(tx).Error
+	m := model.FromDomainWalletTransaction(tx)
+	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
+		return err
+	}
+	*tx = *m.ToDomain()
+	return nil
 }
 
 func (r *walletRepo) GetTransactions(ctx context.Context, photographerID uuid.UUID, page, limit int) ([]domain.WalletTransaction, int64, error) {
-	var txs []domain.WalletTransaction
+	var models []model.WalletTransactionModel
 	var total int64
 
 	executor := infra.GetExecutor(ctx, r.db)
-	query := executor.Model(&domain.WalletTransaction{}).Where("photographer_id = ?", photographerID)
+	query := executor.Model(&model.WalletTransactionModel{}).Where("photographer_id = ?", photographerID)
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * limit
-	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&txs).Error; err != nil {
+	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 
-	return txs, total, nil
+	return model.ToDomainWalletTransactionList(models), total, nil
 }
 
 func (r *walletRepo) CreateWithdrawal(ctx context.Context, req *domain.WithdrawalRequest) error {
-	return infra.GetExecutor(ctx, r.db).Create(req).Error
+	m := model.FromDomainWithdrawalRequest(req)
+	if err := infra.GetExecutor(ctx, r.db).Create(m).Error; err != nil {
+		return err
+	}
+	*req = *m.ToDomain()
+	return nil
 }
 
 func (r *walletRepo) FindWithdrawalByID(ctx context.Context, id uuid.UUID) (*domain.WithdrawalRequest, error) {
-	var req domain.WithdrawalRequest
-	if err := infra.GetExecutor(ctx, r.db).Preload("Photographer").First(&req, "id = ?", id).Error; err != nil {
+	var m model.WithdrawalRequestModel
+	if err := infra.GetExecutor(ctx, r.db).Preload("Photographer").First(&m, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
-	return &req, nil
+	return m.ToDomain(), nil
 }
 
 func (r *walletRepo) ListWithdrawals(ctx context.Context, status domain.WithdrawalStatus, page, limit int) ([]domain.WithdrawalRequest, int64, error) {
-	var reqs []domain.WithdrawalRequest
+	var models []model.WithdrawalRequestModel
 	var total int64
 
 	executor := infra.GetExecutor(ctx, r.db)
-	query := executor.Model(&domain.WithdrawalRequest{}).Preload("Photographer")
+	query := executor.Model(&model.WithdrawalRequestModel{}).Preload("Photographer")
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -74,36 +85,36 @@ func (r *walletRepo) ListWithdrawals(ctx context.Context, status domain.Withdraw
 	}
 
 	offset := (page - 1) * limit
-	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&reqs).Error; err != nil {
+	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 
-	return reqs, total, nil
+	return model.ToDomainWithdrawalRequestList(models), total, nil
 }
 
 func (r *walletRepo) ListWithdrawalsByPhotographer(ctx context.Context, photographerID uuid.UUID, page, limit int) ([]domain.WithdrawalRequest, int64, error) {
-	var reqs []domain.WithdrawalRequest
+	var models []model.WithdrawalRequestModel
 	var total int64
 
 	executor := infra.GetExecutor(ctx, r.db)
-	query := executor.Model(&domain.WithdrawalRequest{}).Where("photographer_id = ?", photographerID)
+	query := executor.Model(&model.WithdrawalRequestModel{}).Where("photographer_id = ?", photographerID)
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * limit
-	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&reqs).Error; err != nil {
+	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 
-	return reqs, total, nil
+	return model.ToDomainWithdrawalRequestList(models), total, nil
 }
 
 func (r *walletRepo) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID, status domain.WithdrawalStatus, processedBy uuid.UUID, notes string) error {
-	return infra.GetExecutor(ctx, r.db).Model(&domain.WithdrawalRequest{}).
+	return infra.GetExecutor(ctx, r.db).Model(&model.WithdrawalRequestModel{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"status":       status,
+			"status":       string(status),
 			"processed_by": processedBy,
 			"notes":        notes,
 		}).Error

@@ -48,6 +48,7 @@ export interface Gallery {
   description: string;
   price_per_photo: number;
   photo_count: number;
+  cover_photo_url?: string;
   photographer: { name: string };
   event?: {
     id: string;

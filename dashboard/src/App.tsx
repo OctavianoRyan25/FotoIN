@@ -9,6 +9,12 @@ import { GalleryListPage } from '@/pages/gallery/GalleryListPage'
 import { GalleryDetailPage } from '@/pages/gallery/GalleryDetailPage'
 import { WalletPage } from '@/pages/wallet/WalletPage'
 import EventListPage from '@/pages/event/EventListPage'
+import { SubscriptionPage } from '@/pages/subscription/SubscriptionPage'
+import { SettingsPage } from '@/pages/settings/SettingsPage'
+import { UserManagementPage } from '@/pages/admin/UserManagementPage'
+import { RevenuePage } from '@/pages/admin/RevenuePage'
+import { WithdrawalApprovalPage } from '@/pages/admin/WithdrawalApprovalPage'
+import { SubscriptionManagementPage } from '@/pages/admin/SubscriptionManagementPage'
 import { Loader2 } from 'lucide-react'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -47,10 +53,19 @@ function AppRoutes() {
       {/* Protected Dashboard */}
       <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<DashboardHomePage />} />
+        {/* Photographer & Common routes */}
         <Route path="events" element={<EventListPage />} />
         <Route path="galleries" element={<GalleryListPage />} />
         <Route path="galleries/:id" element={<GalleryDetailPage />} />
         <Route path="wallet" element={<WalletPage />} />
+        <Route path="subscription" element={<SubscriptionPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+
+        {/* Super Admin routes */}
+        <Route path="users" element={<UserManagementPage />} />
+        <Route path="revenue" element={<RevenuePage />} />
+        <Route path="withdrawals" element={<WithdrawalApprovalPage />} />
+        <Route path="subscriptions" element={<SubscriptionManagementPage />} />
       </Route>
 
       {/* Default redirect */}

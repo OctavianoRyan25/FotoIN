@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
+	"fotoin/backend/internal/config"
 	"fotoin/backend/internal/domain"
 )
 
@@ -22,6 +23,8 @@ type DuidkuSercvice struct {
 	apiKey        string
 	merchantCode  string
 	paymentMethod string
+	callbackURL   string
+	returnURL     string
 	httpClient    *http.Client
 }
 
@@ -72,19 +75,14 @@ type CreateOrderParams struct {
 	ExpiryPeriod    int
 }
 
-func NewDuidkuService() *DuidkuSercvice {
-	env := os.Getenv("DUIDKU_ENV")
-	apiKey := os.Getenv("DUIDKU_APIKEY")
-	merchantCode := os.Getenv("DUIDKU_MERCHANTCODE")
-	paymentMethod := os.Getenv("DUIDKU_PAYMENT_METHOD")
-	if paymentMethod == "" {
-		paymentMethod = "SP"
-	}
+func NewDuidkuService(cfg config.DuitkuConfig) *DuidkuSercvice {
 	return &DuidkuSercvice{
-		isProduction:  env == "production",
-		apiKey:        apiKey,
-		merchantCode:  merchantCode,
-		paymentMethod: paymentMethod,
+		isProduction:  cfg.Environment == "production",
+		apiKey:        cfg.APIKey,
+		merchantCode:  cfg.MerchantCode,
+		paymentMethod: cfg.PaymentMethod,
+		callbackURL:   cfg.CallbackURL,
+		returnURL:     cfg.ReturnURL,
 		httpClient:    &http.Client{Timeout: 15 * time.Second},
 	}
 }
@@ -201,31 +199,13 @@ func (s *DuidkuSercvice) GenerateQRCode(req domain.QRCodePaymentRequest) (*domai
 		return nil, fmt.Errorf("customer_email wajib diisi")
 	}
 
-	callbackURL := os.Getenv("DUIDKU_CALLBACK_URL")
-	if callbackURL == "" {
-		backendBase := os.Getenv("BACKEND_URL")
-		if backendBase == "" {
-			backendBase = "http://localhost:8080"
-		}
-		callbackURL = backendBase + "/api/v1/webhooks/payment"
-	}
-
-	returnURL := os.Getenv("DUIDKU_RETURN_URL")
-	if returnURL == "" {
-		frontendBase := os.Getenv("FRONTEND_URL")
-		if frontendBase == "" {
-			frontendBase = "http://localhost:3000"
-		}
-		returnURL = fmt.Sprintf("%s/payment/%s", frontendBase, req.OrderID)
-	}
-
 	result, err := s.CreateOrder(CreateOrderParams{
 		MerchantOrderId: req.OrderID,
 		PaymentAmount:   int(req.Amount),
 		Email:           req.CustomerEmail,
 		CustomerVaName:  req.CustomerEmail,
-		ReturnURL:       returnURL,
-		CallbackURL:     callbackURL,
+		ReturnURL:       strings.ReplaceAll(s.returnURL, "{order_id}", req.OrderID),
+		CallbackURL:     s.callbackURL,
 	})
 	if err != nil {
 		return nil, err

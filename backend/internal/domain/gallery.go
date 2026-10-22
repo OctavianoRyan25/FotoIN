@@ -8,26 +8,26 @@ import (
 )
 
 type Gallery struct {
-	ID             uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	PhotographerID uuid.UUID  `gorm:"type:uuid;not null;index" json:"photographer_id"`
-	EventID        *uuid.UUID `gorm:"type:uuid;null;index" json:"event_id,omitempty"`
-	Title          string     `gorm:"size:255;not null" json:"title"`
-	Slug           string     `gorm:"size:255;uniqueIndex;not null" json:"slug"`
-	EventDate      time.Time  `gorm:"not null" json:"event_date"`
-	Location       string     `gorm:"size:255" json:"location"`
-	Description    string     `gorm:"type:text" json:"description"`
-	PricePerPhoto  float64    `gorm:"type:decimal(12,2);not null" json:"price_per_photo"`
-	CoverPhotoURL  string     `gorm:"size:500" json:"cover_photo_url"`
-	IsActive       bool       `gorm:"default:true" json:"is_active"`
-	ExpiresAt      *time.Time `gorm:"null" json:"expires_at,omitempty"`
-	PhotoCount     int        `gorm:"-" json:"photo_count"`
-	TotalSales     int        `gorm:"-" json:"total_sales,omitempty"`
+	ID             uuid.UUID  `json:"id"`
+	PhotographerID uuid.UUID  `json:"photographer_id"`
+	EventID        *uuid.UUID `json:"event_id,omitempty"`
+	Title          string     `json:"title"`
+	Slug           string     `json:"slug"`
+	EventDate      time.Time  `json:"event_date"`
+	Location       string     `json:"location"`
+	Description    string     `json:"description"`
+	PricePerPhoto  float64    `json:"price_per_photo"`
+	CoverPhotoURL  string     `json:"cover_photo_url"`
+	IsActive       bool       `json:"is_active"`
+	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
+	PhotoCount     int        `json:"photo_count"`
+	TotalSales     int        `json:"total_sales,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 
-	Photographer User    `gorm:"foreignKey:PhotographerID" json:"photographer,omitempty"`
-	Event        *Event  `gorm:"foreignKey:EventID" json:"event,omitempty"`
-	Photos       []Photo `gorm:"foreignKey:GalleryID" json:"-"`
+	Photographer *User   `json:"photographer,omitempty"`
+	Event        *Event  `json:"event,omitempty"`
+	Photos       []Photo `json:"photos,omitempty"`
 }
 
 type GalleryRepository interface {

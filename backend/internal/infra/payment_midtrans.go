@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
+	"fotoin/backend/internal/config"
 	"fotoin/backend/internal/domain"
 )
 
@@ -21,11 +21,10 @@ type MidtransQRISService struct {
 	isProduction bool
 }
 
-func NewMidtransQRISService() *MidtransQRISService {
-	env := os.Getenv("MIDTRANS_ENV")
+func NewMidtransQRISService(cfg config.MidtransConfig) *MidtransQRISService {
 	return &MidtransQRISService{
-		serverKey:    os.Getenv("MIDTRANS_SERVER_KEY"),
-		isProduction: env == "production",
+		serverKey:    cfg.ServerKey,
+		isProduction: cfg.Environment == "production",
 	}
 }
 
@@ -98,13 +97,13 @@ func (s *MidtransQRISService) GenerateQRCode(req domain.QRCodePaymentRequest) (*
 
 	// Parse Midtrans response
 	var result struct {
-		StatusCode        string `json:"status_code"`
-		StatusMessage     string `json:"status_message"`
-		TransactionID     string `json:"transaction_id"`
-		OrderID           string `json:"order_id"`
-		QRString          string `json:"qr_string"`   // raw QRIS string (scan with any app)
-		ExpiryTime        string `json:"expiry_time"` // "2024-07-09 15:30:00"
-		Actions           []struct {
+		StatusCode    string `json:"status_code"`
+		StatusMessage string `json:"status_message"`
+		TransactionID string `json:"transaction_id"`
+		OrderID       string `json:"order_id"`
+		QRString      string `json:"qr_string"`   // raw QRIS string (scan with any app)
+		ExpiryTime    string `json:"expiry_time"` // "2024-07-09 15:30:00"
+		Actions       []struct {
 			Name   string `json:"name"`
 			Method string `json:"method"`
 			URL    string `json:"url"`
@@ -133,12 +132,12 @@ func (s *MidtransQRISService) GenerateQRCode(req domain.QRCodePaymentRequest) (*
 	}
 
 	return &domain.QRCodePaymentResponse{
-		OrderID:      req.OrderID,
-		Gateway:      domain.PaymentGatewayMidtrans,
-		QRCodeURL:    qrImageURL,   // hosted image (may be empty in sandbox)
-		QRCodeString: qrString,     // EMV string → render on frontend
-		ExpiresAt:    result.ExpiryTime,
-		Amount:       req.Amount,
+		OrderID:       req.OrderID,
+		Gateway:       domain.PaymentGatewayMidtrans,
+		QRCodeURL:     qrImageURL, // hosted image (may be empty in sandbox)
+		QRCodeString:  qrString,   // EMV string → render on frontend
+		ExpiresAt:     result.ExpiryTime,
+		Amount:        req.Amount,
 		PaymentMethod: domain.PaymentMethodQRIS,
 	}, nil
 }

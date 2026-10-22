@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"fotoin/backend/internal/domain"
-	"fotoin/backend/internal/infra"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +18,7 @@ type PhotoUsecase struct {
 	galleryRepo domain.GalleryRepository
 	eventRepo   domain.EventRepository
 	userRepo    domain.UserRepository
-	s3          *infra.S3Client
+	s3          domain.StorageService
 }
 
 func NewPhotoUsecase(
@@ -27,7 +26,7 @@ func NewPhotoUsecase(
 	galleryRepo domain.GalleryRepository,
 	eventRepo domain.EventRepository,
 	userRepo domain.UserRepository,
-	s3 *infra.S3Client,
+	s3 domain.StorageService,
 ) *PhotoUsecase {
 	return &PhotoUsecase{
 		photoRepo:   photoRepo,
@@ -281,7 +280,7 @@ func (u *PhotoUsecase) Delete(ctx context.Context, photoID, photographerID uuid.
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-func attachPreviewURLs(photos []domain.Photo, s3 *infra.S3Client) []domain.Photo {
+func attachPreviewURLs(photos []domain.Photo, s3 domain.StorageService) []domain.Photo {
 	for i := range photos {
 		key := photos[i].S3KeyWatermarked
 		if key == "" {

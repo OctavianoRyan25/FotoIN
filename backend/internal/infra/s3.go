@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
+	"fotoin/backend/internal/config"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -16,37 +16,45 @@ import (
 type S3Client struct {
 	client    *s3.Client
 	bucket    string
+	region    string
+	endpoint  string
 	presigner *s3.PresignClient
 }
 
-func NewS3Client() *S3Client {
-	region := os.Getenv("AWS_REGION")
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	bucket := os.Getenv("AWS_S3_BUCKET")
-	endpoint := os.Getenv("AWS_S3_ENDPOINT")
-
-	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
-			accessKey, secretKey, "",
+func NewS3Client(ctx context.Context, cfg config.S3Config) (*S3Client, error) {
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion(cfg.Region),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			cfg.AccessKey, cfg.SecretKey, "",
 		)),
 	)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to load AWS config: %v", err))
+		return nil, fmt.Errorf("load AWS config: %w", err)
 	}
 
 	opts := []func(*s3.Options){}
 
 	// Support for MinIO / S3-compatible storage
-	if endpoint != "" {
+	if cfg.Endpoint != "" {
 		opts = append(opts, func(o *s3.Options) {
-			o.BaseEndpoint = aws.String(endpoint)
+			o.BaseEndpoint = aws.String(cfg.Endpoint)
 			o.UsePathStyle = true
 		})
 	}
 
-	client := s3.NewFromConfig(cfg, opts...)
+	client := s3.NewFromConfig(awsCfg, opts...)
+
+	// Automatically ensure bucket exists when running with custom endpoint (MinIO / Localstack)
+	if cfg.Endpoint != "" && cfg.Bucket != "" {
+		_, err := client.HeadBucket(ctx, &s3.HeadBucketInput{
+			Bucket: aws.String(cfg.Bucket),
+		})
+		if err != nil {
+			_, _ = client.CreateBucket(ctx, &s3.CreateBucketInput{
+				Bucket: aws.String(cfg.Bucket),
+			})
+		}
+	}
 
 	// PresignClient: we do NOT set presign options globally here.
 	// Per-request options are passed in each method below.
@@ -54,9 +62,11 @@ func NewS3Client() *S3Client {
 
 	return &S3Client{
 		client:    client,
-		bucket:    bucket,
+		bucket:    cfg.Bucket,
+		region:    cfg.Region,
+		endpoint:  cfg.Endpoint,
 		presigner: presigner,
-	}
+	}, nil
 }
 
 // GetPresignedUploadURL generates a presigned URL for direct browser-to-S3 PUT upload.
@@ -132,10 +142,8 @@ func (s *S3Client) DeleteObject(key string) error {
 
 // GetPublicURL returns the public URL for watermarked/preview images
 func (s *S3Client) GetPublicURL(key string) string {
-	endpoint := os.Getenv("AWS_S3_ENDPOINT")
-	if endpoint != "" {
-		return fmt.Sprintf("%s/%s/%s", endpoint, s.bucket, key)
+	if s.endpoint != "" {
+		return fmt.Sprintf("%s/%s/%s", s.endpoint, s.bucket, key)
 	}
-	region := os.Getenv("AWS_REGION")
-	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", s.bucket, region, key)
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", s.bucket, s.region, key)
 }

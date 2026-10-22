@@ -20,33 +20,32 @@ const (
 )
 
 type WalletTransaction struct {
-	ID             uuid.UUID       `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	PhotographerID uuid.UUID       `gorm:"type:uuid;not null;index" json:"photographer_id"`
-	OrderID        *uuid.UUID      `gorm:"type:uuid;null" json:"order_id,omitempty"`
-	Type           TransactionType `gorm:"type:varchar(10);not null" json:"type"`
-	Amount         float64         `gorm:"type:decimal(14,2);not null" json:"amount"`
-	Description    string          `gorm:"size:500" json:"description"`
-	BalanceAfter   float64         `gorm:"type:decimal(14,2);not null" json:"balance_after"`
+	ID             uuid.UUID       `json:"id"`
+	PhotographerID uuid.UUID       `json:"photographer_id"`
+	OrderID        *uuid.UUID      `json:"order_id,omitempty"`
+	Type           TransactionType `json:"type"`
+	Amount         float64         `json:"amount"`
+	Description    string          `json:"description"`
+	BalanceAfter   float64         `json:"balance_after"`
 	CreatedAt      time.Time       `json:"created_at"`
 }
 
 type WithdrawalRequest struct {
-	ID              uuid.UUID        `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	PhotographerID  uuid.UUID        `gorm:"type:uuid;not null;index" json:"photographer_id"`
-	Amount          float64          `gorm:"type:decimal(14,2);not null" json:"amount"`
-	BankName        string           `gorm:"size:100;not null" json:"bank_name"`
-	AccountNumber   string           `gorm:"size:50;not null" json:"account_number"`
-	AccountHolder   string           `gorm:"size:255;not null" json:"account_holder"`
-	Status          WithdrawalStatus `gorm:"type:varchar(20);not null;default:'pending'" json:"status"`
-	ProcessedBy     *uuid.UUID       `gorm:"type:uuid;null" json:"processed_by,omitempty"`
-	ProcessedAt     *time.Time       `gorm:"null" json:"processed_at,omitempty"`
-	Notes           *string          `gorm:"type:text;null" json:"notes,omitempty"`
-	CreatedAt       time.Time        `json:"created_at"`
-	UpdatedAt       time.Time        `json:"updated_at"`
+	ID             uuid.UUID        `json:"id"`
+	PhotographerID uuid.UUID        `json:"photographer_id"`
+	Amount         float64          `json:"amount"`
+	BankName       string           `json:"bank_name"`
+	AccountNumber  string           `json:"account_number"`
+	AccountHolder  string           `json:"account_holder"`
+	Status         WithdrawalStatus `json:"status"`
+	ProcessedBy    *uuid.UUID       `json:"processed_by,omitempty"`
+	ProcessedAt    *time.Time       `json:"processed_at,omitempty"`
+	Notes          *string          `json:"notes,omitempty"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
 
-	// Relations
-	Photographer User  `gorm:"foreignKey:PhotographerID" json:"photographer,omitempty"`
-	Processor    *User `gorm:"foreignKey:ProcessedBy" json:"processor,omitempty"`
+	Photographer *User `json:"photographer,omitempty"`
+	Processor    *User `json:"processor,omitempty"`
 }
 
 type WalletRepository interface {

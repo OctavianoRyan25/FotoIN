@@ -437,7 +437,7 @@ export function DashboardHomePage() {
                       border: "1px solid hsl(var(--border))",
                       fontSize: 12,
                     }}
-                    formatter={(value: number) => [`${value} foto`, "Jumlah"]}
+                    formatter={(value: any) => [`${value} foto`, "Jumlah"]}
                   />
                   <Bar dataKey="photos" radius={[6, 6, 0, 0]} maxBarSize={48}>
                     {chartData.map((_, i) => (

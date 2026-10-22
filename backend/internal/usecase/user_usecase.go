@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fotoin/backend/internal/domain"
-	"fotoin/backend/internal/infra"
 	"fotoin/backend/internal/util"
 	"time"
 
@@ -14,7 +13,7 @@ import (
 
 type UserUsecase struct {
 	userRepo domain.UserRepository
-	mail     *infra.MailClient
+	mail     domain.MailService
 }
 
 // ── Input types ───────────────────────────────────────────────────────────────
@@ -34,7 +33,7 @@ type CreatePasswordInput struct {
 
 // ── Constructor ───────────────────────────────────────────────────────────────
 
-func NewUserUsecase(userRepo domain.UserRepository, mail *infra.MailClient) *UserUsecase {
+func NewUserUsecase(userRepo domain.UserRepository, mail domain.MailService) *UserUsecase {
 	return &UserUsecase{userRepo: userRepo, mail: mail}
 }
 

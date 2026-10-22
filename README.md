@@ -25,10 +25,37 @@ FotoIN/
 
 ## Cara Menjalankan
 
+### Cara Cepat (Rekomendasi: Docker Compose)
+
+Jalankan seluruh stack (PostgreSQL, Redis, MinIO S3, Backend API, Dashboard, dan Client App) dalam satu perintah:
+
+```bash
+# 1. (Opsional) Salin file konfigurasi environment
+cp .env.example .env
+
+# 2. Jalankan seluruh layanan dengan Docker Compose
+docker compose up -d --build
+
+# 3. Akses aplikasi:
+# - Dashboard (Fotografer & Super Admin) : http://localhost:5173
+# - Client App (Pembeli / Galeri Publik) : http://localhost:3000
+# - Backend REST API                     : http://localhost:8080
+# - MinIO Web Console (S3 Storage)       : http://localhost:9001 (user: minioadmin, pass: minioadmin)
+```
+
+Untuk menghentikan layanan:
+```bash
+docker compose down
+```
+
+---
+
+### Cara Manual (Development Tanpa Docker)
+
 ### Prerequisites
 - Go 1.24+
 - Node.js 20+
-- PostgreSQL
+- PostgreSQL & Redis
 
 ### 1. Backend
 ```bash
@@ -61,20 +88,25 @@ npm run dev
 ### Fotografer
 - ✅ Register/Login
 - ✅ Dashboard dengan metrics (saldo, storage, galeri)
-- ✅ Create/Edit/Delete galeri
-- ✅ Upload foto langsung ke S3 via presigned URL
-- ✅ Dompet & request penarikan dana
+- ✅ Create/Edit/Delete galeri & event
+- ✅ Upload foto (presigned URL / backend proxy upload)
+- ✅ Auto-compression di backend untuk efisiensi egress AWS S3
+- ✅ Dompet & request penarikan dana (withdrawal)
+- ✅ Subscription Menu: Upgrade ke Premium (Rp 149.000/bln) dengan simulasi/QRIS
+- ✅ Pengaturan Akun & Password
 
 ### Pembeli (Client)
 - ✅ Akses galeri via URL unik (`/gallery/:slug`)
-- ✅ Browse foto dengan watermark
-- ✅ Cart & checkout (email → payment)
+- ✅ Browse foto dengan watermark overlay pelindung screenshot-abuse
+- ✅ Cart & checkout (email → QR code payment)
 - ✅ Email download link setelah bayar
+- ✅ Browse event publik
 
 ### Super Admin
-- ✅ Manajemen pengguna (suspend/aktif)
-- ✅ Revenue platform overview
-- ✅ Approval/rejection withdrawal request
+- ✅ User Management (suspend, aktifkan, filter role, beri akses premium)
+- ✅ Platform Revenue Overview (total omset, komisi per tier Basic vs Premium, langganan)
+- ✅ Subscription Management (monitoring langganan aktif & riwayat pembayaran)
+- ✅ Approval/rejection withdrawal request dengan catatan transfer/penolakan
 
 ## Business Rules
 

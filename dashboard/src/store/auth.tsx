@@ -8,6 +8,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
+  refreshUser: () => Promise<void>
+  updateUser: (user: User) => void
   isLoading: boolean
 }
 
@@ -27,6 +29,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setIsLoading(false)
   }, [])
+
+  const refreshUser = async () => {
+    try {
+      const res = await api.get<{ data: User }>('/me')
+      if (res.data?.data) {
+        localStorage.setItem('fotoin_user', JSON.stringify(res.data.data))
+        setUser(res.data.data)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const updateUser = (u: User) => {
+    localStorage.setItem('fotoin_user', JSON.stringify(u))
+    setUser(u)
+  }
 
   const login = async (email: string, password: string) => {
     const res = await api.post<{ data: AuthResponse }>('/auth/login', { email, password })
@@ -55,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, refreshUser, updateUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   )

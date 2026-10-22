@@ -2,7 +2,7 @@ export interface User {
   id: string
   name: string
   email: string
-  role: 'photographer' | 'super_admin'
+  role: 'photographer' | 'super_admin' | 'client'
   subscription_tier: 'basic' | 'premium'
   subscription_expires_at?: string
   is_verified: boolean
@@ -129,4 +129,41 @@ export interface UploadURLResponse {
   upload_url: string
   s3_key: string
   s3_key_preview: string
+}
+
+export interface Subscription {
+  id: string
+  user_id: string
+  tier: 'basic' | 'premium'
+  amount: number
+  duration_months: number
+  status: 'pending' | 'paid' | 'expired'
+  qr_code_url?: string
+  qr_code_string?: string
+  qr_expires_at?: string
+  paid_at?: string
+  expires_at?: string
+  created_at: string
+  user?: User
+}
+
+export interface SubscriptionStatusResponse {
+  user: User
+  current_tier: 'basic' | 'premium'
+  expires_at?: string
+  storage_limit_bytes: number
+  storage_used_bytes: number
+  commission_rate: number
+  latest_subscription?: Subscription
+}
+
+export interface RevenueOverview {
+  total_revenue: number
+  order_commission: number
+  basic_tier_revenue: number
+  premium_tier_revenue: number
+  subscription_revenue: number
+  total_orders: number
+  total_photographers: number
+  active_subscribers: number
 }

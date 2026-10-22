@@ -1,31 +1,29 @@
 package handler
 
 import (
-	"fotoin/backend/internal/domain"
-	"fotoin/backend/internal/middleware"
-	"fotoin/backend/pkg/response"
 	"strconv"
+
+	"fotoin/backend/internal/middleware"
+	"fotoin/backend/internal/usecase"
+	"fotoin/backend/pkg/response"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 )
 
 type AdminHandler struct {
-	userRepo domain.UserRepository
-	db       *gorm.DB
-	redis    *redis.Client
+	adminUsecase *usecase.AdminUsecase
 }
 
-func NewAdminHandler(userRepo domain.UserRepository, db *gorm.DB, redis *redis.Client) *AdminHandler {
-	return &AdminHandler{userRepo: userRepo, db: db, redis: redis}
+func NewAdminHandler(adminUsecase *usecase.AdminUsecase) *AdminHandler {
+	return &AdminHandler{adminUsecase: adminUsecase}
 }
 
 func (h *AdminHandler) ListUsers(c echo.Context) error {
 	page, _ := strconv.Atoi(c.QueryParam("page"))
 	limit, _ := strconv.Atoi(c.QueryParam("limit"))
 	search := c.QueryParam("search")
+	role := c.QueryParam("role")
 	if page < 1 {
 		page = 1
 	}
@@ -34,7 +32,7 @@ func (h *AdminHandler) ListUsers(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	users, total, err := h.userRepo.List(ctx, page, limit, search)
+	users, total, err := h.adminUsecase.ListUsers(ctx, page, limit, search, role)
 	if err != nil {
 		return response.InternalError(c, "Failed to fetch users")
 	}
@@ -56,7 +54,7 @@ func (h *AdminHandler) SuspendUser(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	if err := h.userRepo.SuspendUser(ctx, userID, body.Suspended); err != nil {
+	if err := h.adminUsecase.SuspendUser(ctx, userID, body.Suspended); err != nil {
 		return response.InternalError(c, "Failed to update user status")
 	}
 
@@ -68,24 +66,13 @@ func (h *AdminHandler) SuspendUser(c echo.Context) error {
 }
 
 func (h *AdminHandler) GetRevenue(c echo.Context) error {
-	var result struct {
-		TotalRevenue       float64 `json:"total_revenue"`
-		BasicTierRevenue   float64 `json:"basic_tier_revenue"`
-		PremiumTierRevenue float64 `json:"premium_tier_revenue"`
-		TotalOrders        int64   `json:"total_orders"`
-		TotalPhotographers int64   `json:"total_photographers"`
+	ctx := c.Request().Context()
+	stats, err := h.adminUsecase.GetRevenueStats(ctx)
+	if err != nil {
+		return response.InternalError(c, "Failed to fetch revenue overview")
 	}
 
-	h.db.Model(&domain.Order{}).
-		Select("COALESCE(SUM(platform_fee), 0) as total_revenue, COUNT(*) as total_orders").
-		Where("payment_status = ?", domain.PaymentPaid).
-		Scan(&result)
-
-	h.db.Model(&domain.User{}).
-		Where("role = ?", domain.RolePhotographer).
-		Count(&result.TotalPhotographers)
-
-	return response.OK(c, "Revenue overview fetched", result)
+	return response.OK(c, "Revenue overview fetched", stats)
 }
 
 func (h *AdminHandler) GetMe(c echo.Context) error {
@@ -95,12 +82,10 @@ func (h *AdminHandler) GetMe(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	user, err := h.userRepo.FindByID(ctx, userID)
+	user, err := h.adminUsecase.GetUserProfile(ctx, userID)
 	if err != nil {
 		return response.NotFound(c, "User not found")
 	}
-
-	user.HasPassword = user.PasswordHash != ""
 
 	return response.OK(c, "Profile fetched", user)
 }
