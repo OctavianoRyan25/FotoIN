@@ -1,0 +1,18 @@
+# Environment variables
+.env
+.env.*
+
+# Private Keys & Certificates
+*.pem
+key/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

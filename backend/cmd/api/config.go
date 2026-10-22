@@ -66,7 +66,12 @@ func newApplication(ctx context.Context, cfg appconfig.Config) (_ *application, 
 	subRepo := repository.NewSubscriptionRepository(db)
 	adminRepo := repository.NewAdminRepository(db)
 
-	paymentService := infra.NewDuidkuService(cfg.Duitku)
+	var paymentService domain.PaymentService
+	if cfg.Midtrans.ClientId != "" || cfg.Midtrans.ServerKey != "" {
+		paymentService = infra.NewMidtransQRISService(cfg.Midtrans)
+	} else {
+		paymentService = infra.NewDuidkuService(cfg.Duitku)
+	}
 	google := infra.NewGoogle(cfg.Google)
 	mailClient := infra.NewMailClient(cfg.SMTP)
 

@@ -65,8 +65,14 @@ type DuitkuConfig struct {
 }
 
 type MidtransConfig struct {
-	Environment string
-	ServerKey   string
+	Environment  string
+	ServerKey    string
+	ClientId     string
+	ClientSecret string
+	PartnerId    string
+	ChannelId    string
+	MerchantId   string
+	PrivateKey   string
 }
 
 func LoadConfig() Config {
@@ -121,8 +127,14 @@ func LoadConfig() Config {
 			ReturnURL:     returnURL,
 		},
 		Midtrans: MidtransConfig{
-			Environment: os.Getenv("MIDTRANS_ENV"),
-			ServerKey:   os.Getenv("MIDTRANS_SERVER_KEY"),
+			Environment:  os.Getenv("MIDTRANS_ENV"),
+			ServerKey:    os.Getenv("MIDTRANS_SERVER_KEY"),
+			ClientId:     os.Getenv("MIDTRANS_CLIENT_ID"),
+			ClientSecret: os.Getenv("MIDTRANS_CLIENT_SECRET"),
+			PartnerId:    os.Getenv("MIDTRANS_PARTNER_ID"),
+			ChannelId:    os.Getenv("MIDTRANS_CHANNEL_ID"),
+			MerchantId:   os.Getenv("MIDTRANS_MERCHANT_ID"),
+			PrivateKey:   os.Getenv("MIDTRANS_PRIVATE_KEY"),
 		},
 	}
 }
