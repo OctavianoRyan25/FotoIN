@@ -23,9 +23,9 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found, using environment variables")
-	}
+	_ = godotenv.Load()
+	_ = godotenv.Load("../.env")
+
 
 	region    := os.Getenv("AWS_REGION")
 	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
@@ -47,6 +47,32 @@ func main() {
 	}
 
 	client := s3.NewFromConfig(cfg)
+
+	// List all available buckets
+	listOut, err := client.ListBuckets(context.Background(), &s3.ListBucketsInput{})
+	if err != nil {
+		fmt.Printf("⚠️  Could not list buckets: %v\n", err)
+	} else {
+		fmt.Println("Available buckets in this AWS account:")
+		for _, b := range listOut.Buckets {
+			loc, _ := client.GetBucketLocation(context.Background(), &s3.GetBucketLocationInput{Bucket: b.Name})
+			fmt.Printf("  - %s (region: %s, created: %v)\n", *b.Name, loc.LocationConstraint, b.CreationDate)
+			bucket = *b.Name
+			if loc.LocationConstraint != "" {
+				region = string(loc.LocationConstraint)
+			}
+		}
+		fmt.Println()
+
+		// Recreate client with correct bucket region
+		cfg, _ = config.LoadDefaultConfig(context.Background(),
+			config.WithRegion(region),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+				accessKey, secretKey, "",
+			)),
+		)
+		client = s3.NewFromConfig(cfg)
+	}
 
 	// Allowed origins: add production domain here when deploying
 	allowedOrigins := []string{

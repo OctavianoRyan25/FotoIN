@@ -72,7 +72,7 @@ func newApplication(ctx context.Context, cfg appconfig.Config) (_ *application, 
 	} else {
 		paymentService = infra.NewDuidkuService(cfg.Duitku)
 	}
-	google := infra.NewGoogle(cfg.Google)
+	google := infra.NewGoogle(ctx, cfg.Google)
 	mailClient := infra.NewMailClient(cfg.SMTP)
 
 	authUsecase := usecase.NewAuthUsecase(userRepo, google)
@@ -172,7 +172,6 @@ func newRouter(
 	events.GET("/:id/photos", photoHandler.ListEventPhotos)
 	events.POST("/:id/photos/upload-url", photoHandler.GetEventUploadURL)
 	events.POST("/:id/photos/confirm", photoHandler.ConfirmEventUpload)
-	events.POST("/:id/photos/proxy-upload", photoHandler.ProxyEventUpload)
 
 	galleries := protected.Group("/galleries")
 	galleries.GET("", galleryHandler.List)
@@ -183,7 +182,6 @@ func newRouter(
 	galleries.GET("/:id/photos", photoHandler.ListPhotos)
 	galleries.POST("/:id/photos/upload-url", photoHandler.GetUploadURL)
 	galleries.POST("/:id/photos/confirm", photoHandler.ConfirmUpload)
-	galleries.POST("/:id/photos/proxy-upload", photoHandler.ProxyUpload)
 
 	protected.DELETE("/photos/:id", photoHandler.DeletePhoto)
 	protected.GET("/wallet", walletHandler.GetWallet)

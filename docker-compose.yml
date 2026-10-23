@@ -33,21 +33,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── S3-Compatible Object Storage (MinIO) ──────────────────────────────────
-  minio:
-    image: cgr.dev/chainguard/minio:latest
-    container_name: fotoin-minio
-    restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-
   # ─── Backend API (Golang Echo) ──────────────────────────────────────────────
   backend:
     build:
@@ -68,12 +53,11 @@ services:
       DB_NAME: "${DB_NAME:-fotoin}"
       DB_SSLMODE: "disable"
       URL_REDIS: "redis://redis:6379/0"
-      # S3 / MinIO Settings
-      AWS_REGION: "us-east-1"
-      AWS_ACCESS_KEY_ID: "${MINIO_ROOT_USER:-minioadmin}"
-      AWS_SECRET_ACCESS_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
-      AWS_S3_BUCKET: "${AWS_S3_BUCKET:-fotoin-bucket}"
-      AWS_S3_ENDPOINT: "http://minio:9000"
+      # AWS S3 Settings
+      AWS_REGION: "${AWS_REGION:-ap-southeast-1}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_S3_BUCKET: "${AWS_S3_BUCKET}"
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost:8080"
       # Payment & Third-Party (Optional in local development)
       MIDTRANS_ENV: "${MIDTRANS_ENV:-sandbox}"
@@ -81,13 +65,15 @@ services:
       DUIDKU_ENV: "${DUIDKU_ENV:-sandbox}"
       DUIDKU_APIKEY: "${DUIDKU_APIKEY:-}"
       DUIDKU_MERCHANTCODE: "${DUIDKU_MERCHANTCODE:-}"
+      # Google OAuth
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      GOOGLE_REDIRECT_URL: "${GOOGLE_REDIRECT_URL}"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
 
   # ─── Dashboard (React + Vite + Nginx) ────────────────────────────────────────
   dashboard:
@@ -122,4 +108,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  minio_data:
+

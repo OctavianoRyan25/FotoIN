@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Port            string
+	BackendURL      string
 	AllowedOrigins  []string
 	ShutdownTimeout time.Duration
 	Database        DatabaseConfig
@@ -85,6 +86,7 @@ func LoadConfig() Config {
 
 	return Config{
 		Port:            port,
+		BackendURL:      backendURL,
 		AllowedOrigins:  parseAllowedOrigins(os.Getenv("CORS_ALLOWED_ORIGINS")),
 		ShutdownTimeout: 10 * time.Second,
 		Database: DatabaseConfig{

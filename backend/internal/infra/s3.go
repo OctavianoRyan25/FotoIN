@@ -33,8 +33,6 @@ func NewS3Client(ctx context.Context, cfg config.S3Config) (*S3Client, error) {
 	}
 
 	opts := []func(*s3.Options){}
-
-	// Support for MinIO / S3-compatible storage
 	if cfg.Endpoint != "" {
 		opts = append(opts, func(o *s3.Options) {
 			o.BaseEndpoint = aws.String(cfg.Endpoint)
@@ -43,21 +41,6 @@ func NewS3Client(ctx context.Context, cfg config.S3Config) (*S3Client, error) {
 	}
 
 	client := s3.NewFromConfig(awsCfg, opts...)
-
-	// Automatically ensure bucket exists when running with custom endpoint (MinIO / Localstack)
-	if cfg.Endpoint != "" && cfg.Bucket != "" {
-		_, err := client.HeadBucket(ctx, &s3.HeadBucketInput{
-			Bucket: aws.String(cfg.Bucket),
-		})
-		if err != nil {
-			_, _ = client.CreateBucket(ctx, &s3.CreateBucketInput{
-				Bucket: aws.String(cfg.Bucket),
-			})
-		}
-	}
-
-	// PresignClient: we do NOT set presign options globally here.
-	// Per-request options are passed in each method below.
 	presigner := s3.NewPresignClient(client)
 
 	return &S3Client{
@@ -115,8 +98,6 @@ func (s *S3Client) GetPresignedDownloadURL(key string, ttl time.Duration) (strin
 }
 
 // UploadObject uploads a file directly from the backend (server-side) to S3.
-// Use this as a fallback proxy when the browser cannot PUT directly to S3
-// due to missing CORS policy on the bucket.
 func (s *S3Client) UploadObject(key, contentType string, body io.Reader, size int64) error {
 	_, err := s.client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),
@@ -147,3 +128,5 @@ func (s *S3Client) GetPublicURL(key string) string {
 	}
 	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", s.bucket, s.region, key)
 }
+
+

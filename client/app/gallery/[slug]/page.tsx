@@ -370,7 +370,9 @@ function GalleryView({
                 <img
                   src={photo.preview_url}
                   alt={photo.filename}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none select-none"
                   loading="lazy"
                 />
                 <WatermarkOverlay />
@@ -572,7 +574,9 @@ function GalleryView({
               <img
                 src={selectedPhoto.preview_url}
                 alt={selectedPhoto.filename}
-                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg select-none"
               />
               <WatermarkOverlay />
             </div>

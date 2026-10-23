@@ -4,96 +4,135 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 
-/**
- * Google OAuth Callback Page
- *
- * The backend redirects here after Google authentication:
- *   http://localhost:3000/auth/callback#token=<JWT>
- *
- * The token is in the URL fragment (# hash) so it's NOT sent to any server.
- * We extract it, store in localStorage, then redirect to the client portal.
- */
+type State = 'loading' | 'success' | 'error'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1'
+
+// Pesan error dipetakan ke teks yang aman, bukan menampilkan string mentah dari URL
+const ERROR_MESSAGES: Record<string, string> = {
+  access_denied: 'Kamu membatalkan login Google.',
+  invalid_token: 'Sesi login tidak valid. Silakan coba lagi.',
+}
+const DEFAULT_ERROR = 'Terjadi kesalahan saat login. Silakan coba lagi.'
+
 export default function AuthCallbackPage() {
   const router = useRouter()
-  const [state, setState] = useState<'loading' | 'success' | 'error'>('loading')
+  const [state, setState] = useState<State>('loading')
   const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
-    // Read fragment from URL (not accessible server-side)
-    const hash = window.location.hash.slice(1) // remove leading '#'
-    const params = new URLSearchParams(hash)
+    const controller = new AbortController()
+    let redirectTimer: ReturnType<typeof setTimeout> | undefined
 
-    const token = params.get('token')
-    const error = params.get('error') ?? new URLSearchParams(window.location.search).get('error')
+    const fail = (msg: string) => {
+      localStorage.removeItem('client_token')
+      localStorage.removeItem('client_user')
+      setErrorMsg(msg)
+      setState('error')
+    }
+
+    const hashParams = new URLSearchParams(window.location.hash.slice(1))
+    const searchParams = new URLSearchParams(window.location.search)
+
+    const token = hashParams.get('token')
+    const error = hashParams.get('error') ?? searchParams.get('error')
+
+    // Hapus token dari address bar & history secepatnya
+    window.history.replaceState(null, '', window.location.pathname)
 
     if (error) {
-      setState('error')
-      setErrorMsg(decodeURIComponent(error))
+      fail(ERROR_MESSAGES[error] ?? DEFAULT_ERROR)
       return
     }
 
     if (!token) {
-      setState('error')
-      setErrorMsg('Token tidak ditemukan. Coba login lagi.')
+      fail('Token tidak ditemukan. Silakan login lagi.')
       return
     }
 
-    // Persist JWT for the client portal
-    localStorage.setItem('client_token', token)
+    const timeout = setTimeout(() => controller.abort(), 10_000)
 
-    // Fetch user profile
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1'
-    fetch(`${API_URL}/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data) {
-          localStorage.setItem('client_user', JSON.stringify(data.data))
-          setState('success')
-          setTimeout(() => router.replace('/orders'), 1500)
-        } else {
-          throw new Error('Gagal memuat profil')
-        }
-      })
-      .catch((err) => {
-        setState('error')
-        setErrorMsg('Gagal mengambil data user: ' + err.message)
-      })
+    ;(async () => {
+      try {
+        const res = await fetch(`${API_URL}/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+        const data = await res.json()
+        if (!data?.success || !data?.data) throw new Error('Respons tidak valid')
+
+        localStorage.setItem('client_token', token)
+        localStorage.setItem('client_user', JSON.stringify(data.data))
+
+        setState('success')
+        redirectTimer = setTimeout(() => router.replace('/orders'), 1200)
+      } catch (err) {
+        if (controller.signal.aborted && !timeout) return
+        const aborted = err instanceof DOMException && err.name === 'AbortError'
+        fail(
+          aborted
+            ? 'Server terlalu lama merespons. Silakan coba lagi.'
+            : 'Gagal mengambil data akun. Silakan coba lagi.'
+        )
+      } finally {
+        clearTimeout(timeout)
+      }
+    })()
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
+      if (redirectTimer) clearTimeout(redirectTimer)
+    }
   }, [router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
+    <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div
+        className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center"
+        role="status"
+        aria-live="polite"
+      >
         {state === 'loading' && (
           <>
-            <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4" />
+            <div
+              aria-hidden="true"
+              className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4"
+            />
             <p className="text-gray-600">Memproses login Google…</p>
           </>
         )}
 
         {state === 'success' && (
           <>
-            <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
+            <CheckCircle size={48} aria-hidden="true" className="text-green-500 mx-auto mb-4" />
             <h1 className="text-xl font-bold text-gray-900 mb-2">Login Berhasil!</h1>
-            <p className="text-gray-600 text-sm">Mengalihkan ke halaman pesanan…</p>
+            <p className="text-gray-600 text-sm mb-4">Mengalihkan ke halaman pesanan…</p>
+            <button
+              onClick={() => router.replace('/orders')}
+              className="text-sm text-violet-600 hover:underline"
+            >
+              Lanjut sekarang
+            </button>
           </>
         )}
 
         {state === 'error' && (
           <>
-            <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+            <AlertCircle size={48} aria-hidden="true" className="text-red-500 mx-auto mb-4" />
             <h1 className="text-xl font-bold text-gray-900 mb-2">Login Gagal</h1>
             <p className="text-gray-600 text-sm mb-4">{errorMsg}</p>
             <button
               onClick={() => router.push('/')}
-              className="px-6 py-2 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700"
+              className="px-6 py-2 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-400"
             >
               Kembali ke Beranda
             </button>
           </>
         )}
       </div>
-    </div>
+    </main>
   )
 }

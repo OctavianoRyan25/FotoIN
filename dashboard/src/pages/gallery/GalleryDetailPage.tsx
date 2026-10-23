@@ -26,6 +26,7 @@ import { formatRupiah, formatBytes, formatDate } from "@/lib/utils";
 import api from "@/lib/api";
 import type { Gallery, Photo } from "@/types";
 import { toast } from "sonner";
+import { createWatermarkedPreview } from "@/lib/watermark";
 
 export function GalleryDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -76,39 +77,57 @@ export function GalleryDetailPage() {
 
     for (const file of files) {
       try {
-        // Guard: empty MIME causes S3 SignatureDoesNotMatch
         const contentType = file.type || "application/octet-stream";
 
-        // Step 1 — Get presigned PUT URL from backend
+        // Step 1 — Get presigned PUT URLs for BOTH raw original and watermarked preview
         const urlRes = await api.post(`/galleries/${id}/photos/upload-url`, {
           filename: file.name,
           content_type: contentType,
         });
-        const { upload_url, s3_key } = urlRes.data.data;
+        const {
+          upload_url,
+          upload_url_watermarked,
+          s3_key,
+          s3_key_watermarked,
+        } = urlRes.data.data;
 
-        // Step 2 — PUT file directly to S3
-        // Content-Type header MUST exactly match what was signed
-        const uploadResponse = await fetch(upload_url, {
+        // Step 2 — Generate burned-in watermarked preview on the client (pixels burned via Canvas)
+        const watermarkLabel = gallery?.title ? `FotoIN • ${gallery.title}` : "FotoIN";
+        const watermarkedBlob = await createWatermarkedPreview(file, watermarkLabel);
+
+        // Step 3 — Upload watermarked preview FIRST (priority) + raw in parallel
+        // 3a. Watermarked preview upload (lightweight ~250KB, fast)
+        const putWatermarked = fetch(upload_url_watermarked, {
+          method: "PUT",
+          body: watermarkedBlob,
+          headers: { "Content-Type": "image/jpeg" },
+        });
+
+        // 3b. Raw original upload
+        const putRaw = fetch(upload_url, {
           method: "PUT",
           body: file,
           headers: { "Content-Type": contentType },
         });
 
-        if (!uploadResponse.ok) {
-          // Parse AWS XML error body for a meaningful message
-          const errText = await uploadResponse.text();
-          const code =
-            errText.match(/<Code>(.*?)<\/Code>/)?.[1] ?? uploadResponse.status;
-          const msg =
-            errText.match(/<Message>(.*?)<\/Message>/)?.[1] ??
-            uploadResponse.statusText;
-          throw new Error(`S3 [${code}]: ${msg}`);
+        const [resWatermarked, resRaw] = await Promise.all([putWatermarked, putRaw]);
+
+        if (!resWatermarked.ok) {
+          const errText = await resWatermarked.text();
+          const code = errText.match(/<Code>(.*?)<\/Code>/)?.[1] ?? resWatermarked.status;
+          throw new Error(`S3 Watermarked [${code}]`);
+        }
+        if (!resRaw.ok) {
+          const errText = await resRaw.text();
+          const code = errText.match(/<Code>(.*?)<\/Code>/)?.[1] ?? resRaw.status;
+          throw new Error(`S3 Raw [${code}]`);
         }
 
-        // Step 3 — Register in DB and update storage quota
+        // Step 4 — Register in DB with both s3_key (raw) and s3_key_watermarked
         await api.post(`/galleries/${id}/photos/confirm`, {
           gallery_id: id,
           s3_key,
+          s3_key_watermarked,
           filename: file.name,
           size_bytes: file.size,
         });

@@ -37,13 +37,39 @@ type Google struct {
 	states map[string]oauthState // state -> expiry
 }
 
-func NewGoogle(cfg config.GoogleConfig) *Google {
-	return &Google{
+func NewGoogle(ctx context.Context, cfg config.GoogleConfig) *Google {
+	g := &Google{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
 		RedirectURL:  cfg.RedirectURL,
 		states:       make(map[string]oauthState),
 	}
+	g.StartCleanupWorker(ctx, 10*time.Minute)
+	return g
+}
+
+// CleanUp expired states periodically
+func (g *Google) StartCleanupWorker(ctx context.Context, interval time.Duration) {
+    go func() {
+        ticker := time.NewTicker(interval)
+        defer ticker.Stop()
+
+        for {
+            select {
+            case <-ctx.Done():
+                return // Keluar secara rapi saat server shutdown
+            case <-ticker.C:
+                g.mu.Lock()
+                now := time.Now()
+                for state, data := range g.states {
+                    if now.After(data.expiresAt) {
+                        delete(g.states, state)
+                    }
+                }
+                g.mu.Unlock()
+            }
+        }
+    }()
 }
 
 // AuthURL builds the Google OAuth consent-screen URL and registers the state.

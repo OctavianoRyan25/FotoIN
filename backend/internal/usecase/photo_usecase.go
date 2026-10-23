@@ -46,18 +46,20 @@ type GetUploadURLInput struct {
 }
 
 type UploadURLResponse struct {
-	UploadURL    string `json:"upload_url"`
-	S3Key        string `json:"s3_key"`
-	S3KeyPreview string `json:"s3_key_preview"`
+	UploadURL            string `json:"upload_url"`
+	UploadURLWatermarked string `json:"upload_url_watermarked"`
+	S3Key                string `json:"s3_key"`
+	S3KeyWatermarked     string `json:"s3_key_watermarked"`
 }
 
 type ConfirmUploadInput struct {
-	GalleryID string `json:"gallery_id" validate:"required"`
-	S3Key     string `json:"s3_key" validate:"required"`
-	Filename  string `json:"filename" validate:"required"`
-	SizeBytes int64  `json:"size_bytes" validate:"required,min=1"`
-	Width     int    `json:"width"`
-	Height    int    `json:"height"`
+	GalleryID        string `json:"gallery_id" validate:"required"`
+	S3Key            string `json:"s3_key" validate:"required"`
+	S3KeyWatermarked string `json:"s3_key_watermarked"`
+	Filename         string `json:"filename" validate:"required"`
+	SizeBytes        int64  `json:"size_bytes" validate:"required,min=1"`
+	Width            int    `json:"width"`
+	Height           int    `json:"height"`
 }
 
 func (u *PhotoUsecase) GetUploadURL(ctx context.Context, photographerID uuid.UUID, input GetUploadURLInput) (*UploadURLResponse, error) {
@@ -82,17 +84,23 @@ func (u *PhotoUsecase) GetUploadURL(ctx context.Context, photographerID uuid.UUI
 	photoID := uuid.New()
 	ext := filepath.Ext(input.Filename)
 	s3Key := fmt.Sprintf("galleries/%s/photos/%s%s", input.GalleryID, photoID.String(), ext)
-	s3KeyPreview := fmt.Sprintf("galleries/%s/watermarked/%s%s", input.GalleryID, photoID.String(), ext)
+	s3KeyWatermarked := fmt.Sprintf("galleries/%s/watermarked/%s%s", input.GalleryID, photoID.String(), ext)
 
-	uploadURL, err := u.s3.GetPresignedUploadURL(s3Key, input.ContentType, 15*time.Minute)
+	uploadURLRaw, err := u.s3.GetPresignedUploadURL(s3Key, input.ContentType, 15*time.Minute)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate upload URL: %w", err)
+		return nil, fmt.Errorf("failed to generate raw upload URL: %w", err)
+	}
+
+	uploadURLWatermarked, err := u.s3.GetPresignedUploadURL(s3KeyWatermarked, "image/jpeg", 15*time.Minute)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate watermarked upload URL: %w", err)
 	}
 
 	return &UploadURLResponse{
-		UploadURL:    uploadURL,
-		S3Key:        s3Key,
-		S3KeyPreview: s3KeyPreview,
+		UploadURL:            uploadURLRaw,
+		UploadURLWatermarked: uploadURLWatermarked,
+		S3Key:                s3Key,
+		S3KeyWatermarked:     s3KeyWatermarked,
 	}, nil
 }
 
@@ -109,7 +117,10 @@ func (u *PhotoUsecase) ConfirmUpload(ctx context.Context, photographerID uuid.UU
 		return nil, errors.New("unauthorized")
 	}
 
-	s3KeyWatermarked := strings.Replace(input.S3Key, "/photos/", "/watermarked/", 1)
+	s3KeyWatermarked := input.S3KeyWatermarked
+	if s3KeyWatermarked == "" {
+		s3KeyWatermarked = strings.Replace(input.S3Key, "/photos/", "/watermarked/", 1)
+	}
 
 	photo := &domain.Photo{
 		ID:               uuid.New(),
@@ -147,12 +158,13 @@ type GetEventUploadURLInput struct {
 }
 
 type ConfirmEventUploadInput struct {
-	EventID   string `json:"event_id" validate:"required"`
-	S3Key     string `json:"s3_key" validate:"required"`
-	Filename  string `json:"filename" validate:"required"`
-	SizeBytes int64  `json:"size_bytes" validate:"required,min=1"`
-	Width     int    `json:"width"`
-	Height    int    `json:"height"`
+	EventID          string `json:"event_id" validate:"required"`
+	S3Key            string `json:"s3_key" validate:"required"`
+	S3KeyWatermarked string `json:"s3_key_watermarked"`
+	Filename         string `json:"filename" validate:"required"`
+	SizeBytes        int64  `json:"size_bytes" validate:"required,min=1"`
+	Width            int    `json:"width"`
+	Height           int    `json:"height"`
 }
 
 func (u *PhotoUsecase) GetEventUploadURL(ctx context.Context, photographerID uuid.UUID, input GetEventUploadURLInput) (*UploadURLResponse, error) {
@@ -178,17 +190,23 @@ func (u *PhotoUsecase) GetEventUploadURL(ctx context.Context, photographerID uui
 	photoID := uuid.New()
 	ext := filepath.Ext(input.Filename)
 	s3Key := fmt.Sprintf("events/%s/photos/%s%s", input.EventID, photoID.String(), ext)
-	s3KeyPreview := fmt.Sprintf("events/%s/watermarked/%s%s", input.EventID, photoID.String(), ext)
+	s3KeyWatermarked := fmt.Sprintf("events/%s/watermarked/%s%s", input.EventID, photoID.String(), ext)
 
-	uploadURL, err := u.s3.GetPresignedUploadURL(s3Key, input.ContentType, 15*time.Minute)
+	uploadURLRaw, err := u.s3.GetPresignedUploadURL(s3Key, input.ContentType, 15*time.Minute)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate upload URL: %w", err)
+		return nil, fmt.Errorf("failed to generate raw upload URL: %w", err)
+	}
+
+	uploadURLWatermarked, err := u.s3.GetPresignedUploadURL(s3KeyWatermarked, "image/jpeg", 15*time.Minute)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate watermarked upload URL: %w", err)
 	}
 
 	return &UploadURLResponse{
-		UploadURL:    uploadURL,
-		S3Key:        s3Key,
-		S3KeyPreview: s3KeyPreview,
+		UploadURL:            uploadURLRaw,
+		UploadURLWatermarked: uploadURLWatermarked,
+		S3Key:                s3Key,
+		S3KeyWatermarked:     s3KeyWatermarked,
 	}, nil
 }
 
@@ -208,7 +226,10 @@ func (u *PhotoUsecase) ConfirmEventUpload(ctx context.Context, photographerID uu
 		return nil, errors.New("unauthorized")
 	}
 
-	s3KeyWatermarked := strings.Replace(input.S3Key, "/photos/", "/watermarked/", 1)
+	s3KeyWatermarked := input.S3KeyWatermarked
+	if s3KeyWatermarked == "" {
+		s3KeyWatermarked = strings.Replace(input.S3Key, "/photos/", "/watermarked/", 1)
+	}
 
 	photo := &domain.Photo{
 		ID:               uuid.New(),
@@ -278,11 +299,18 @@ func (u *PhotoUsecase) Delete(ctx context.Context, photoID, photographerID uuid.
 	return u.photoRepo.Delete(ctx, photoID)
 }
 
+func (u *PhotoUsecase) GetByID(ctx context.Context, photoID uuid.UUID) (*domain.Photo, error) {
+	return u.photoRepo.FindByID(ctx, photoID)
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func attachPreviewURLs(photos []domain.Photo, s3 domain.StorageService) []domain.Photo {
 	for i := range photos {
 		key := photos[i].S3KeyWatermarked
+		if key == "" {
+			key = photos[i].S3KeyCompressed
+		}
 		if key == "" {
 			key = photos[i].S3Key
 		}

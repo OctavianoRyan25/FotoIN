@@ -1,17 +1,12 @@
 package handler
 
 import (
-	"fmt"
-	"net/http"
-	"path/filepath"
-	"strings"
+	"strconv"
 
 	"fotoin/backend/internal/infra"
 	"fotoin/backend/internal/middleware"
 	"fotoin/backend/internal/usecase"
-	"fotoin/backend/internal/util"
 	"fotoin/backend/pkg/response"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -37,7 +32,7 @@ func (h *PhotoHandler) GetUploadURL(c echo.Context) error {
 	if err != nil {
 		return response.BadRequest(c, "Invalid gallery ID", nil)
 	}
-
+	
 	var body struct {
 		Filename    string `json:"filename"`
 		ContentType string `json:"content_type"`
@@ -197,125 +192,4 @@ func (h *PhotoHandler) ConfirmEventUpload(c echo.Context) error {
 	return response.Created(c, "Photo registered successfully", photo)
 }
 
-// ─── Proxy Upload (backend → S3, bypasses browser CORS) ──────────────────────
-// Use when S3 bucket does not have a CORS policy allowing PUT from the browser.
-// The browser sends multipart/form-data to this endpoint; the backend proxies
-// the file to S3 using server-side credentials (no CORS needed on the bucket).
 
-const maxUploadSize = 50 << 20 // 50 MB
-
-func (h *PhotoHandler) ProxyUpload(c echo.Context) error {
-	photographerID, err := middleware.GetUserID(c)
-	if err != nil {
-		return response.Unauthorized(c, "Invalid token")
-	}
-
-	galleryID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		return response.BadRequest(c, "Invalid gallery ID", nil)
-	}
-
-	if err := c.Request().ParseMultipartForm(maxUploadSize); err != nil {
-		return response.BadRequest(c, "File too large or invalid form", err.Error())
-	}
-
-	file, header, err := c.Request().FormFile("file")
-	if err != nil {
-		return response.BadRequest(c, "Missing file field", err.Error())
-	}
-	defer file.Close()
-
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	// Build S3 key — same pattern as presigned flow
-	photoID := uuid.New()
-	ext := filepath.Ext(header.Filename)
-	s3Key := fmt.Sprintf("galleries/%s/photos/%s%s", galleryID, photoID, ext)
-
-	// Auto-compression: compress if image > 3MB to save egress & storage costs
-	uploadReader, uploadSize, finalContentType, err := util.CompressImage(file, header.Filename, header.Size, contentType)
-	if err != nil {
-		uploadReader = file
-		uploadSize = header.Size
-		finalContentType = contentType
-	}
-
-	if err := h.s3.UploadObject(s3Key, finalContentType, uploadReader, uploadSize); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "S3 upload failed: " + err.Error(),
-		})
-	}
-
-	// Confirm in DB
-	photo, err := h.photoUsecase.ConfirmUpload(c.Request().Context(), photographerID, usecase.ConfirmUploadInput{
-		GalleryID: galleryID.String(),
-		S3Key:     s3Key,
-		Filename:  header.Filename,
-		SizeBytes: uploadSize,
-	})
-	if err != nil {
-		return response.BadRequest(c, err.Error(), nil)
-	}
-
-	return response.Created(c, "Photo uploaded successfully", photo)
-}
-
-func (h *PhotoHandler) ProxyEventUpload(c echo.Context) error {
-	photographerID, err := middleware.GetUserID(c)
-	if err != nil {
-		return response.Unauthorized(c, "Invalid token")
-	}
-
-	eventID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		return response.BadRequest(c, "Invalid event ID", nil)
-	}
-
-	if err := c.Request().ParseMultipartForm(maxUploadSize); err != nil {
-		return response.BadRequest(c, "File too large or invalid form", err.Error())
-	}
-
-	file, header, err := c.Request().FormFile("file")
-	if err != nil {
-		return response.BadRequest(c, "Missing file field", err.Error())
-	}
-	defer file.Close()
-
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" || !strings.HasPrefix(contentType, "image/") {
-		contentType = "application/octet-stream"
-	}
-
-	photoID := uuid.New()
-	ext := filepath.Ext(header.Filename)
-	s3Key := fmt.Sprintf("events/%s/photos/%s%s", eventID, photoID, ext)
-
-	// Auto-compression: compress if image > 3MB to save egress & storage costs
-	uploadReader, uploadSize, finalContentType, err := util.CompressImage(file, header.Filename, header.Size, contentType)
-	if err != nil {
-		uploadReader = file
-		uploadSize = header.Size
-		finalContentType = contentType
-	}
-
-	if err := h.s3.UploadObject(s3Key, finalContentType, uploadReader, uploadSize); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "S3 upload failed: " + err.Error(),
-		})
-	}
-
-	photo, err := h.photoUsecase.ConfirmEventUpload(c.Request().Context(), photographerID, usecase.ConfirmEventUploadInput{
-		EventID:   eventID.String(),
-		S3Key:     s3Key,
-		Filename:  header.Filename,
-		SizeBytes: uploadSize,
-	})
-	if err != nil {
-		return response.BadRequest(c, err.Error(), nil)
-	}
-
-	return response.Created(c, "Photo uploaded successfully", photo)
-}
